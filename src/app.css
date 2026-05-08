@@ -654,14 +654,13 @@ footer.app-footer {
   #app { padding: 14px 12px 48px; }
 
   header.app-header {
-    gap: 10px 0;
+    gap: 10px;
     margin-bottom: 18px;
     padding-bottom: 12px;
+    align-items: flex-start;
+    flex-wrap: nowrap;
   }
-  header.app-header .header-left { width: 100%; }
   header.app-header h1 { font-size: 1.27rem; }
-
-  .header-controls { width: 100%; justify-content: flex-start; }
 
   .card { padding: 16px; }
   .card h2 { font-size: 1.07rem; }
