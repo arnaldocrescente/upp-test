@@ -299,9 +299,29 @@
     return sessions;
   }
 
+  function getWorstAnsweredIds(n) {
+    const counts = {};
+    const allResults = Object.values(persisted.exerciseResults || {});
+    for (const result of allResults) {
+      if (!result || !result.questions) continue;
+      result.questions.forEach((q, i) => {
+        const a = result.answers[i];
+        const isWrong = a === null || a === undefined || (a !== q.correctIndex && a !== q.partialIndex);
+        if (isWrong) counts[q.questionId] = (counts[q.questionId] || 0) + 1;
+      });
+    }
+    return Object.entries(counts)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, n)
+      .map(([id]) => id);
+  }
+
   function generateExam() {
-    const allIds = QUIZ_DATA.map((q) => q.id);
-    const ids = shuffle(allIds).slice(0, EXAM_QUESTIONS);
+    const WORST_IN_EXAM = 5;
+    const worstIds = getWorstAnsweredIds(WORST_IN_EXAM);
+    const worstSet = new Set(worstIds);
+    const otherIds = shuffle(QUIZ_DATA.map((q) => q.id).filter((id) => !worstSet.has(id)));
+    const ids = shuffle([...worstIds, ...otherIds.slice(0, EXAM_QUESTIONS - worstIds.length)]);
     return {
       type: 'exam',
       questions: buildSessionFromIds(ids),
