@@ -53,6 +53,7 @@
     exercises: null, // array of session descriptors (or null = not generated)
     examHistory: [], // last few exam runs
     exerciseResults: {}, // { [sessionIdx]: result }
+    exerciseHistory: [], // archived results from previous exercise sets
   };
 
   function loadPersisted() {
@@ -340,6 +341,7 @@
         persisted.exercises = null;
         persisted.examHistory = [];
         persisted.exerciseResults = {};
+        persisted.exerciseHistory = [];
         savePersisted();
         state.confirmModal = null;
         setView('home');
@@ -387,9 +389,13 @@
               if (persisted.exercises) {
                 state.confirmModal = {
                   title: 'Rigenerare le esercitazioni?',
-                  body: 'I risultati delle 10 sessioni esistenti verranno cancellati.',
+                  body: 'I risultati delle sessioni correnti verranno archiviati nello storico. Nessun dato verrà perso.',
                   confirmLabel: 'Rigenera',
                   onConfirm: () => {
+                    const oldResults = Object.values(persisted.exerciseResults || {});
+                    if (oldResults.length > 0) {
+                      persisted.exerciseHistory = [...(persisted.exerciseHistory || []), ...oldResults];
+                    }
                     persisted.exercises = generateExercises();
                     persisted.exerciseResults = {};
                     savePersisted();
@@ -767,6 +773,14 @@
       persisted.examHistory.forEach((r) => {
         const score = r.score != null ? r.score : r.correct;
         rows.push({ label: 'Esame', date: r.finishedAt, score, total: r.total, partial: r.partial || 0, correct: r.correct, wrong: r.wrong, blank: r.blank, result: r });
+      });
+    }
+
+    if (persisted.exerciseHistory) {
+      persisted.exerciseHistory.forEach((r) => {
+        const score = r.score != null ? r.score : r.correct;
+        const label = r.sessionIndex != null ? `Esercitazione ${r.sessionIndex + 1} (archiviata)` : 'Esercitazione (archiviata)';
+        rows.push({ label, date: r.finishedAt, score, total: r.total, partial: r.partial || 0, correct: r.correct, wrong: r.wrong, blank: r.blank, result: r });
       });
     }
 
