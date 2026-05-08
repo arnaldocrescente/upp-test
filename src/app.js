@@ -693,11 +693,9 @@
         el('h2', {}, 'Esercitazioni'),
         el('p', {}, '10 sessioni che coprono tutte le domande senza ripetizioni. Ordine domande e risposte casuale. Timer 60 minuti per sessione (non blocca, mostra eventuale sforamento).'),
         el('div', { class: 'btn-row' }, [
-          el('button', {
-            class: 'btn',
-            ...(persisted.pausedSession ? {} : { disabled: '' }),
-            on: { click: resumeSession },
-          }, 'Continua'),
+          persisted.pausedSession
+            ? el('button', { class: 'btn', on: { click: resumeSession } }, 'Continua')
+            : el('button', { class: 'btn', disabled: '' }, 'Continua'),
           el('button', {
             class: 'btn ' + (persisted.exercises ? 'secondary' : ''),
             on: { click: () => {
