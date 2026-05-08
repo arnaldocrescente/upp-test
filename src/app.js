@@ -9,7 +9,7 @@
   const EXERCISE_COUNT = 10;
   const QUESTIONS_PER_EXERCISE = 30;          // nominal
   const EXERCISE_DURATION_MS = 60 * 60 * 1000; // 60 min
-  const EXAM_QUESTIONS = 60;
+  const EXAM_QUESTIONS = 30;
   const EXAM_DURATION_MS = 90 * 60 * 1000;     // 90 min
 
   // Configuration.
@@ -229,6 +229,7 @@
     state.recap = result;
     active = null;
     render();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
   // ----- View state -----
