@@ -238,6 +238,7 @@
     examHistory: [], // last few exam runs
     exerciseResults: {}, // { [sessionIdx]: result }
     exerciseHistory: [], // archived results from previous exercise sets
+    pausedSession: null, // saved mid-session state for resume
   };
 
   function loadPersisted() {
@@ -436,6 +437,47 @@
     active = null;
     render();
     window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function pauseSession() {
+    if (!active || active.hardStop) return;
+    persisted.pausedSession = {
+      session: active.session,
+      type: active.type,
+      durationMs: active.durationMs,
+      hardStop: active.hardStop,
+      pausedElapsed: Date.now() - active.startedAt,
+      answers: active.answers.slice(),
+      currentIdx: active.currentIdx,
+      seen: [...active.seen],
+      timeUpFired: active.timeUpFired,
+    };
+    savePersisted();
+    if (timerHandle) { clearInterval(timerHandle); timerHandle = null; }
+    active = null;
+    setView('home');
+  }
+
+  function resumeSession() {
+    const p = persisted.pausedSession;
+    if (!p) return;
+    persisted.pausedSession = null;
+    savePersisted();
+    active = {
+      session: p.session,
+      type: p.type,
+      durationMs: p.durationMs,
+      hardStop: p.hardStop,
+      startedAt: Date.now() - p.pausedElapsed,
+      finishedAt: null,
+      answers: p.answers,
+      currentIdx: p.currentIdx,
+      seen: new Set(p.seen),
+      timeUpFired: p.timeUpFired,
+    };
+    if (timerHandle) clearInterval(timerHandle);
+    timerHandle = setInterval(tick, 250);
+    setView('session');
   }
 
   // ----- View state -----
@@ -651,8 +693,8 @@
         el('h2', {}, 'Esercitazioni'),
         el('p', {}, '10 sessioni che coprono tutte le domande senza ripetizioni. Ordine domande e risposte casuale. Timer 60 minuti per sessione (non blocca, mostra eventuale sforamento).'),
         el('div', { class: 'btn-row' }, [
-          persisted.exercises
-            ? el('button', { class: 'btn', on: { click: () => setView('home') } }, 'Continua')
+          persisted.pausedSession
+            ? el('button', { class: 'btn', on: { click: resumeSession } }, 'Continua')
             : null,
           el('button', {
             class: 'btn ' + (persisted.exercises ? 'secondary' : ''),
@@ -835,6 +877,12 @@
         ` · ${answeredCount}/${total} risposte`,
       ]),
       el('div', { id: 'timer', class: 'timer' }, fmtTime(remaining)),
+      !active.hardStop
+        ? el('button', {
+            class: 'btn ghost',
+            on: { click: pauseSession },
+          }, 'Pausa')
+        : null,
       el('button', {
         class: 'btn danger',
         on: { click: () => {
