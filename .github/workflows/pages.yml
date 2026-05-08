@@ -4,7 +4,7 @@ on:
   push:
     branches: [main]
     paths:
-      - 'apps/quiz/**'
+      - 'src/**'
       - '.github/workflows/pages.yml'
   workflow_dispatch:
 
