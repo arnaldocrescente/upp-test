@@ -1,5 +1,7 @@
 # Quiz Addetti UPP
 
+**Live:** https://arnaldocrescente.github.io/upp-test/
+
 App web statica per la preparazione all'esame degli Addetti UPP. Gira interamente nel browser — nessun server, nessun account. I progressi vengono salvati nel `localStorage` del dispositivo.
 
 ## Come funziona
