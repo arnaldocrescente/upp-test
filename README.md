@@ -14,7 +14,7 @@ Distribuisce **tutte le domande** in 10 sessioni senza ripetizioni. L'ordine del
 
 ### Genera Esame
 
-Avvia una simulazione d'esame con **60 domande** estratte casualmente dalla banca dati, risposte mescolate. Il timer è di **90 minuti** e alla scadenza la sessione si chiude automaticamente, esattamente come nell'esame reale.
+Avvia una simulazione d'esame con **30 domande** estratte casualmente dalla banca dati, risposte mescolate. Il timer è di **90 minuti** e alla scadenza la sessione si chiude automaticamente, esattamente come nell'esame reale.
 
 ## Riepilogo e revisione
 

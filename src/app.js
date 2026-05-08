@@ -147,6 +147,7 @@
       finishedAt: null,
       answers: new Array(session.questions.length).fill(null),
       currentIdx: 0,
+      seen: new Set([0]),
       timeUpFired: false,
     };
     render();
@@ -408,7 +409,7 @@
       ]),
       el('div', { class: 'card' }, [
         el('h2', {}, 'Esame'),
-        el('p', {}, '60 domande casuali, risposte mescolate. Timer 90 minuti — alla scadenza la sessione si chiude automaticamente.'),
+        el('p', {}, '30 domande casuali, risposte mescolate. Timer 90 minuti — alla scadenza la sessione si chiude automaticamente.'),
         el('div', { class: 'btn-row' }, [
           el('button', {
             class: 'btn success',
@@ -535,15 +536,24 @@
 
   function renderSession() {
     if (!active) return el('div', {}, 'Nessuna sessione attiva.');
+
+    // Mark current question as seen
+    if (!active.seen) active.seen = new Set([0]);
+    active.seen.add(active.currentIdx);
+
     const wrap = el('div');
+    const total = active.session.questions.length;
     const elapsed = Date.now() - active.startedAt;
     const remaining = active.durationMs - elapsed;
     const answeredCount = active.answers.filter((a) => a !== null && a !== undefined).length;
+    const qi = active.currentIdx;
+    const q = active.session.questions[qi];
 
+    // Sticky header
     wrap.appendChild(el('div', { class: 'quiz-header' }, [
       el('div', { class: 'progress' }, [
         active.type === 'exam' ? 'Esame' : `Esercitazione ${active.session.index + 1}`,
-        ` · ${answeredCount}/${active.session.questions.length} risposte`,
+        ` · ${answeredCount}/${total} risposte`,
       ]),
       el('div', { id: 'timer', class: 'timer' }, fmtTime(remaining)),
       el('button', {
@@ -564,48 +574,75 @@
       }, 'Termina'),
     ]));
 
-    active.session.questions.forEach((q, qi) => {
-      const block = el('div', { class: 'question-block', id: `q-${qi}` });
-      const hasAnswer = active.answers[qi] !== null && active.answers[qi] !== undefined;
-      const headerRow = el('div', {
-        style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' },
-      }, [
-        el('div', { style: { fontSize: '13px', color: 'var(--muted)' } }, `Domanda ${qi + 1}`),
-        hasAnswer
-          ? el('button', {
-              class: 'btn ghost',
-              style: { padding: '4px 10px', fontSize: '12px' },
-              on: { click: () => { active.answers[qi] = null; render(); } },
-            }, 'Annulla risposta')
-          : el('span', { style: { fontSize: '12px', color: 'var(--muted)' } }, 'Non risposta'),
-      ]);
-      block.appendChild(headerRow);
-      block.appendChild(el('div', { class: 'question-text' }, q.question));
-      const list = el('div', { class: 'answer-list' });
-      q.answers.forEach((aText, ai) => {
-        const isSel = active.answers[qi] === ai;
-        const item = el('div', {
-          class: 'answer' + (isSel ? ' selected' : ''),
-          on: { click: () => {
-            active.answers[qi] = isSel ? null : ai;
-            render();
-          } },
-        }, [
-          el('div', { class: 'marker' }, String.fromCharCode(65 + ai)),
-          el('div', {}, aText),
-        ]);
-        list.appendChild(item);
-      });
-      block.appendChild(list);
-      wrap.appendChild(block);
-    });
+    // Question navigator grid
+    const navGrid = el('div', { class: 'q-nav' });
+    for (let i = 0; i < total; i++) {
+      const answered = active.answers[i] !== null && active.answers[i] !== undefined;
+      const seen = active.seen.has(i);
+      let cls = 'q-nav-btn';
+      if (i === qi) cls += ' current';
+      if (answered) cls += ' answered';
+      else if (seen) cls += ' skipped';
+      navGrid.appendChild(el('button', {
+        class: cls,
+        on: { click: () => {
+          active.currentIdx = i;
+          render();
+          window.scrollTo(0, 0);
+        } },
+      }, String(i + 1)));
+    }
+    wrap.appendChild(navGrid);
 
-    wrap.appendChild(el('div', { class: 'btn-row', style: { marginTop: '20px', justifyContent: 'flex-end' } }, [
-      el('button', {
-        class: 'btn',
-        on: { click: () => finishSession() },
-      }, 'Concludi e vedi risultati'),
+    // Current question block
+    const block = el('div', { class: 'question-block' });
+    const hasAnswer = active.answers[qi] !== null && active.answers[qi] !== undefined;
+    block.appendChild(el('div', {
+      style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' },
+    }, [
+      el('div', { style: { fontSize: '13px', color: 'var(--muted)' } }, `Domanda ${qi + 1} di ${total}`),
+      hasAnswer
+        ? el('button', {
+            class: 'btn ghost',
+            style: { padding: '4px 10px', fontSize: '12px' },
+            on: { click: () => { active.answers[qi] = null; render(); } },
+          }, 'Annulla risposta')
+        : el('span', { style: { fontSize: '12px', color: 'var(--muted)' } }, 'Non risposta'),
     ]));
+    block.appendChild(el('div', { class: 'question-text' }, q.question));
+    const list = el('div', { class: 'answer-list' });
+    q.answers.forEach((aText, ai) => {
+      const isSel = active.answers[qi] === ai;
+      list.appendChild(el('div', {
+        class: 'answer' + (isSel ? ' selected' : ''),
+        on: { click: () => {
+          active.answers[qi] = isSel ? null : ai;
+          render();
+        } },
+      }, [
+        el('div', { class: 'marker' }, String.fromCharCode(65 + ai)),
+        el('div', {}, aText),
+      ]));
+    });
+    block.appendChild(list);
+    wrap.appendChild(block);
+
+    // Prev / Next navigation
+    const goTo = (idx) => {
+      active.currentIdx = idx;
+      render();
+      window.scrollTo(0, 0);
+    };
+    const navRow = el('div', { class: 'btn-row q-nav-row' });
+    const prevBtn = el('button', { class: 'btn ghost', on: { click: () => goTo(qi - 1) } }, '← Precedente');
+    if (qi === 0) prevBtn.setAttribute('disabled', '');
+    navRow.appendChild(prevBtn);
+    if (qi < total - 1) {
+      navRow.appendChild(el('button', { class: 'btn', on: { click: () => goTo(qi + 1) } }, 'Successiva →'));
+    } else {
+      navRow.appendChild(el('button', { class: 'btn success', on: { click: () => finishSession() } }, 'Concludi e vedi risultati'));
+    }
+    wrap.appendChild(navRow);
 
     return wrap;
   }
