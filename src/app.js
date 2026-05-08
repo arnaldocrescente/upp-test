@@ -5,6 +5,30 @@
   const QUIZ_DATA = JSON.parse(document.getElementById('quiz-data').textContent);
   const STORAGE_KEY = 'quiz-state-v1';
   const CONSENT_KEY = 'quiz-consent-v1';
+  const PREFS_KEY   = 'quiz-prefs-v1';
+
+  const TOUR_STEPS = [
+    {
+      icon: '🎓',
+      title: 'Benvenuto!',
+      body: 'Questa app ti aiuta a prepararti all\'esame per addetti UPP. Ecco un rapido giro guidato — ci vogliono meno di due minuti.',
+    },
+    {
+      icon: '📝',
+      title: 'Esercitazioni',
+      body: '10 sessioni coprono tutte le 297 domande senza ripetizioni. Il timer da 60 minuti è indicativo: puoi continuare anche dopo la scadenza e lo sforamento verrà mostrato nel riepilogo.',
+    },
+    {
+      icon: '⏱',
+      title: 'Prova d\'esame',
+      body: '30 domande casuali con timer da 90 minuti che chiude la sessione automaticamente. Punteggio ufficiale: corretta 1 pt · parziale 0,5 pt · sbagliata/saltata 0 pt.',
+    },
+    {
+      icon: '🎨',
+      title: 'Tema e dimensione testo',
+      body: 'Usa i controlli in cima alla pagina per scegliere il tema (Scuro, Alto Contrasto, Seppia) e la dimensione del testo (S / M / L). Le preferenze vengono salvate automaticamente.',
+    },
+  ];
 
   const EXERCISE_COUNT = 10;
   const QUESTIONS_PER_EXERCISE = 30;          // nominal
@@ -25,6 +49,23 @@
     paypalMeUsername: 'arnc',
     paypalCurrency: 'EUR',
   };
+
+  // ----- Preferences (theme / font size / tour) -----
+  const prefs = { theme: 'dark', fontSize: 'medium', tourDone: false };
+
+  function loadPrefs() {
+    try {
+      const raw = localStorage.getItem(PREFS_KEY);
+      if (raw) Object.assign(prefs, JSON.parse(raw));
+    } catch {}
+  }
+  function savePrefs() {
+    try { localStorage.setItem(PREFS_KEY, JSON.stringify(prefs)); } catch {}
+  }
+  function applyPrefs() {
+    document.documentElement.setAttribute('data-theme', prefs.theme);
+    document.documentElement.setAttribute('data-size', prefs.fontSize);
+  }
 
   // ----- Consent / Analytics -----
   function getConsent() {
@@ -239,6 +280,7 @@
     view: 'home', // 'home' | 'session' | 'recap' | 'reviewExercise' | 'history'
     recap: null,
     confirmModal: null,
+    tourStep: -1,
   };
 
   function setView(view, data = {}) {
@@ -280,6 +322,7 @@
     root.appendChild(content);
     root.appendChild(renderFooter());
     if (state.confirmModal) root.appendChild(renderModal(state.confirmModal));
+    if (state.tourStep >= 0) root.appendChild(renderTour());
     if (!getConsent()) root.appendChild(renderConsentBanner());
   }
 
@@ -303,8 +346,83 @@
 
   function renderHeader() {
     return el('header', { class: 'app-header' }, [
-      el('h1', {}, 'Quiz Addetti UPP'),
-      el('div', { class: 'meta' }, `${QUIZ_DATA.length} domande in banca dati`),
+      el('div', { class: 'header-left' }, [
+        el('h1', {}, 'Quiz Addetti UPP'),
+        el('div', { class: 'meta' }, `${QUIZ_DATA.length} domande in banca dati`),
+      ]),
+      el('div', { class: 'header-controls' }, [
+        renderThemeControls(),
+        renderFontControls(),
+        renderTourButton(),
+      ]),
+    ]);
+  }
+
+  function renderThemeControls() {
+    const themes = [
+      { id: 'dark',          label: '☾', title: 'Tema scuro' },
+      { id: 'high-contrast', label: '◑', title: 'Alto contrasto' },
+      { id: 'sepia',         label: '☀', title: 'Tema seppia' },
+    ];
+    return el('div', { class: 'ctrl-group' },
+      themes.map(({ id, label, title }) =>
+        el('button', {
+          class: 'ctrl-btn' + (prefs.theme === id ? ' active' : ''),
+          title,
+          on: { click: () => { prefs.theme = id; savePrefs(); applyPrefs(); render(); } },
+        }, label)
+      )
+    );
+  }
+
+  function renderFontControls() {
+    const sizes = [
+      { id: 'small',  label: 'A', cls: 'fs-s', title: 'Testo piccolo' },
+      { id: 'medium', label: 'A', cls: 'fs-m', title: 'Testo medio' },
+      { id: 'large',  label: 'A', cls: 'fs-l', title: 'Testo grande' },
+    ];
+    return el('div', { class: 'ctrl-group' },
+      sizes.map(({ id, label, cls, title }) =>
+        el('button', {
+          class: `ctrl-btn ${cls}` + (prefs.fontSize === id ? ' active' : ''),
+          title,
+          on: { click: () => { prefs.fontSize = id; savePrefs(); applyPrefs(); render(); } },
+        }, label)
+      )
+    );
+  }
+
+  function renderTourButton() {
+    return el('button', {
+      class: 'tour-trigger',
+      title: 'Guida introduttiva',
+      on: { click: () => { state.tourStep = 0; render(); } },
+    }, '?');
+  }
+
+  function renderTour() {
+    const step = state.tourStep;
+    const s = TOUR_STEPS[step];
+    const isLast = step === TOUR_STEPS.length - 1;
+
+    const dismiss = () => { prefs.tourDone = true; savePrefs(); state.tourStep = -1; render(); };
+    const next    = () => { isLast ? dismiss() : (state.tourStep++, render()); };
+
+    return el('div', { class: 'tour-backdrop' }, [
+      el('div', { class: 'tour-card' }, [
+        el('div', { class: 'tour-dots' },
+          TOUR_STEPS.map((_, i) =>
+            el('div', { class: 'tour-dot' + (i === step ? ' active' : i < step ? ' done' : '') })
+          )
+        ),
+        el('span', { class: 'tour-icon' }, s.icon),
+        el('h3', { class: 'tour-title' }, s.title),
+        el('p', { class: 'tour-body' }, s.body),
+        el('div', { class: 'tour-actions' }, [
+          el('button', { class: 'tour-skip', on: { click: dismiss } }, 'Salta e non mostrare più'),
+          el('button', { class: 'btn', on: { click: next } }, isLast ? 'Inizia! →' : 'Avanti →'),
+        ]),
+      ]),
     ]);
   }
 
@@ -442,7 +560,7 @@
         list.appendChild(renderSessionCard(s, i, result));
       });
       wrap.appendChild(el('div', {}, [
-        el('h2', { style: { fontSize: '17px', marginTop: '8px' } }, 'Le tue 10 sessioni'),
+        el('h2', { style: { fontSize: '1.13rem', marginTop: '8px' } }, 'Le tue 10 sessioni'),
         list,
       ]));
     }
@@ -606,14 +724,14 @@
     block.appendChild(el('div', {
       style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' },
     }, [
-      el('div', { style: { fontSize: '13px', color: 'var(--muted)' } }, `Domanda ${qi + 1} di ${total}`),
+      el('div', { style: { fontSize: '0.87rem', color: 'var(--muted)' } }, `Domanda ${qi + 1} di ${total}`),
       hasAnswer
         ? el('button', {
             class: 'btn ghost',
-            style: { padding: '4px 10px', fontSize: '12px' },
+            style: { padding: '4px 10px', fontSize: '0.8rem' },
             on: { click: () => { active.answers[qi] = null; render(); } },
           }, 'Annulla risposta')
-        : el('span', { style: { fontSize: '12px', color: 'var(--muted)' } }, 'Non risposta'),
+        : el('span', { style: { fontSize: '0.8rem', color: 'var(--muted)' } }, 'Non risposta'),
     ]));
     block.appendChild(el('div', { class: 'question-text' }, q.question));
     const list = el('div', { class: 'answer-list' });
@@ -811,7 +929,7 @@
         el('div', {}, String(row.partial)),
         el('div', {}, String(row.wrong)),
         el('div', {}, [
-          el('button', { class: 'btn ghost', style: { padding: '4px 10px', fontSize: '12px' }, on: { click: () => setView('recap', { recap: row.result }) } }, 'Rivedi'),
+          el('button', { class: 'btn ghost', style: { padding: '4px 10px', fontSize: '0.8rem' }, on: { click: () => setView('recap', { recap: row.result }) } }, 'Rivedi'),
         ]),
       ]));
     });
@@ -822,6 +940,9 @@
 
   // ----- Boot -----
   loadPersisted();
+  loadPrefs();
+  applyPrefs();
+  if (!prefs.tourDone) state.tourStep = 0;
   applyConsent();
   render();
 })();
