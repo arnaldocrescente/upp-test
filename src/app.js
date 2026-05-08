@@ -695,7 +695,7 @@
         el('div', { class: 'btn-row' }, [
           persisted.pausedSession
             ? el('button', { class: 'btn', on: { click: resumeSession } }, 'Continua')
-            : null,
+            : el('button', { class: 'btn', disabled: '' }, 'Continua'),
           el('button', {
             class: 'btn ' + (persisted.exercises ? 'secondary' : ''),
             on: { click: () => {
