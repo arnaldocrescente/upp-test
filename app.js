@@ -21,8 +21,8 @@
   //   paypalCurrency     Currency code appended to the PayPal.me link.
   // Leaving any value empty disables that feature.
   const CONFIG = {
-    clarityProjectId: '',
-    paypalMeUsername: '',
+    clarityProjectId: 'wnuccjvwhb',
+    paypalMeUsername: 'arnc',
     paypalCurrency: 'EUR',
   };
 
