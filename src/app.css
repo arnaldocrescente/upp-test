@@ -534,71 +534,39 @@ header.app-header .meta {
 .modal .modal-actions { display: flex; gap: 10px; justify-content: flex-end; }
 
 /* ============================================================
-   TOUR
+   TOUR (spotlight)
    ============================================================ */
-.tour-backdrop {
-  position: fixed;
-  inset: 0;
-  background: rgba(0,0,0,0.72);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 200;
-  padding: 20px;
-}
+.tour-icon { font-size: 2rem; display: block; margin-bottom: 8px; line-height: 1; }
 
-.tour-card {
+.tour-tooltip {
   background: var(--bg-2);
   border: 1px solid var(--border);
-  border-radius: calc(var(--radius) + 4px);
-  padding: 32px 28px 24px;
-  max-width: 420px;
-  width: 100%;
-  box-shadow: 0 24px 64px rgba(0,0,0,0.45);
+  border-radius: 10px;
+  padding: 18px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+  animation: slidein 0.2s;
 }
-
-.tour-dots { display: flex; gap: 6px; margin-bottom: 24px; }
-
-.tour-dot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: var(--bg-3);
-  transition: background 0.2s, transform 0.2s;
-}
-.tour-dot.active { background: var(--primary); transform: scale(1.35); }
-.tour-dot.done   { background: var(--success); }
-
-.tour-icon { font-size: 2.4rem; display: block; margin-bottom: 14px; line-height: 1; }
-
-.tour-title { font-size: 1.27rem; font-weight: 700; margin: 0 0 10px 0; color: var(--fg); }
-
-.tour-body {
+.tour-step-dot {
+  font-size: 11px;
   color: var(--muted);
-  font-size: 0.93rem;
-  line-height: 1.65;
-  margin: 0 0 24px 0;
+  margin-bottom: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
-
-.tour-actions {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.tour-skip {
-  background: none;
-  border: none;
-  color: var(--muted);
+.tour-title { font-size: 1rem; font-weight: 700; margin: 0 0 6px 0; color: var(--fg); }
+.tour-text {
   font-size: 0.87rem;
-  cursor: pointer;
-  font-family: inherit;
-  padding: 4px 0;
-  text-decoration: underline;
-  text-underline-offset: 3px;
+  color: var(--muted);
+  line-height: 1.55;
+  margin: 0 0 14px 0;
 }
-.tour-skip:hover { color: var(--fg); }
+.tour-btn-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+.tour-btn-sm { padding: 6px 12px !important; font-size: 0.8rem !important; }
 
 /* ============================================================
    MISC
@@ -737,7 +705,6 @@ footer.app-footer {
   }
 
   .modal { padding: 18px; }
-  .tour-card { padding: 24px 20px 18px; }
 }
 
 /* ============================================================

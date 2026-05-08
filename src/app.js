@@ -6,27 +6,34 @@
   const STORAGE_KEY = 'quiz-state-v1';
   const CONSENT_KEY = 'quiz-consent-v1';
   const PREFS_KEY   = 'quiz-prefs-v1';
+  const USER_ID_KEY = 'quiz-user-id-v1';
 
+  let _isNewUser = false;
+  const tourState = { active: false, step: 0, scrolled: false };
   const TOUR_STEPS = [
     {
+      target: null,
       icon: '🎓',
       title: 'Benvenuto!',
-      body: 'Questa app ti aiuta a prepararti all\'esame per addetti UPP. Ecco un rapido giro guidato — ci vogliono meno di due minuti.',
+      text: "Questa app ti aiuta a prepararti all'esame per addetti UPP. Ecco un rapido giro guidato — ci vogliono meno di due minuti.",
     },
     {
+      target: '.card-exercises',
       icon: '📝',
       title: 'Esercitazioni',
-      body: '10 sessioni coprono tutte le 297 domande senza ripetizioni. Il timer da 60 minuti è indicativo: puoi continuare anche dopo la scadenza e lo sforamento verrà mostrato nel riepilogo.',
+      text: '10 sessioni coprono tutte le 297 domande senza ripetizioni. Il timer da 60 minuti è indicativo: puoi continuare anche dopo la scadenza.',
     },
     {
+      target: '.card-exam',
       icon: '⏱',
-      title: 'Prova d\'esame',
-      body: '30 domande casuali con timer da 90 minuti che chiude la sessione automaticamente. Punteggio ufficiale: corretta 1 pt · parziale 0,5 pt · sbagliata/saltata 0 pt.',
+      title: "Prova d'esame",
+      text: "30 domande casuali con timer da 90 minuti che chiude la sessione automaticamente. Punteggio: corretta 1 pt · parziale 0,5 pt · sbagliata 0 pt.",
     },
     {
+      target: '.header-controls',
       icon: '🎨',
       title: 'Tema e dimensione testo',
-      body: 'Usa i controlli in cima alla pagina per scegliere il tema (Scuro, Alto Contrasto, Seppia) e la dimensione del testo (S / M / L). Le preferenze vengono salvate automaticamente.',
+      text: 'Usa i controlli in cima alla pagina per scegliere il tema e la dimensione del testo. Le preferenze vengono salvate automaticamente.',
     },
   ];
 
@@ -87,6 +94,142 @@
     if (getConsent() === 'accepted') {
       loadClarity(CONFIG.clarityProjectId);
     }
+  }
+
+  // ----- User ID -----
+  function initUserId() {
+    try {
+      if (!localStorage.getItem(USER_ID_KEY)) {
+        localStorage.setItem(USER_ID_KEY, 'u' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8));
+        _isNewUser = true;
+      }
+    } catch {}
+  }
+
+  // ----- Tour (spotlight) -----
+  function endTour(done = true) {
+    tourState.active = false;
+    if (done) { prefs.tourDone = true; savePrefs(); }
+    document.querySelectorAll('.tour-strip, .tour-tooltip').forEach((e) => e.remove());
+  }
+
+  function updateTourOverlay() {
+    document.querySelectorAll('.tour-strip, .tour-tooltip').forEach((e) => e.remove());
+    if (!tourState.active) return;
+    if (!getConsent()) return;
+    if (state.view !== 'home') { endTour(false); return; }
+
+    const step = TOUR_STEPS[tourState.step];
+    if (!step) { endTour(); return; }
+
+    const isLast = tourState.step === TOUR_STEPS.length - 1;
+    const Z = 150;
+    const BG = 'rgba(0,0,0,0.75)';
+    const PAD = 8;
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+    let targetRect = null;
+
+    if (step.target) {
+      const targetEl = document.querySelector(step.target);
+      if (targetEl) {
+        targetEl.style.position = 'relative';
+        targetEl.style.zIndex = String(Z + 10);
+        targetEl.style.outline = '2px solid #3b82f6';
+        targetEl.style.outlineOffset = '4px';
+        if (!tourState.scrolled) {
+          targetEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          tourState.scrolled = true;
+        }
+        targetRect = targetEl.getBoundingClientRect();
+        const x1 = Math.max(0, targetRect.left - PAD);
+        const y1 = Math.max(0, targetRect.top - PAD);
+        const x2 = Math.min(vw, targetRect.right + PAD);
+        const y2 = Math.min(vh, targetRect.bottom + PAD);
+        [
+          `position:fixed;top:0;left:0;right:0;height:${y1}px;background:${BG};z-index:${Z};`,
+          `position:fixed;top:${y2}px;left:0;right:0;bottom:0;background:${BG};z-index:${Z};`,
+          `position:fixed;top:${y1}px;left:0;width:${x1}px;height:${y2 - y1}px;background:${BG};z-index:${Z};`,
+          `position:fixed;top:${y1}px;left:${x2}px;right:0;height:${y2 - y1}px;background:${BG};z-index:${Z};`,
+        ].forEach((css) => {
+          const d = document.createElement('div');
+          d.className = 'tour-strip';
+          d.style.cssText = css;
+          document.body.appendChild(d);
+        });
+      }
+    } else {
+      const d = document.createElement('div');
+      d.className = 'tour-strip';
+      d.style.cssText = `position:fixed;inset:0;background:${BG};z-index:${Z};`;
+      document.body.appendChild(d);
+    }
+
+    const TW = Math.min(320, vw - 24);
+    let tLeft, tTop;
+    if (targetRect) {
+      tLeft = targetRect.left + (targetRect.width - TW) / 2;
+      tLeft = Math.max(12, Math.min(tLeft, vw - TW - 12));
+      const spaceBelow = vh - (targetRect.bottom + PAD + 14);
+      tTop = spaceBelow >= 160 ? targetRect.bottom + PAD + 14 : targetRect.top - PAD - 174;
+      tTop = Math.max(12, Math.min(tTop, vh - 180));
+    } else {
+      tLeft = Math.max(12, (vw - TW) / 2);
+      tTop = Math.max(12, (vh - 220) / 2);
+    }
+
+    const tt = document.createElement('div');
+    tt.className = 'tour-tooltip';
+    tt.style.cssText = `position:fixed;left:${tLeft}px;top:${tTop}px;width:${TW}px;z-index:${Z + 20};`;
+
+    const dot = document.createElement('div');
+    dot.className = 'tour-step-dot';
+    dot.textContent = `${tourState.step + 1} / ${TOUR_STEPS.length}`;
+    tt.appendChild(dot);
+
+    const iconEl = document.createElement('span');
+    iconEl.className = 'tour-icon';
+    iconEl.textContent = step.icon || '';
+    tt.appendChild(iconEl);
+
+    const h = document.createElement('div');
+    h.className = 'tour-title';
+    h.textContent = step.title;
+    tt.appendChild(h);
+
+    const p = document.createElement('p');
+    p.className = 'tour-text';
+    p.textContent = step.text;
+    tt.appendChild(p);
+
+    const row = document.createElement('div');
+    row.className = 'tour-btn-row';
+
+    const skip = document.createElement('button');
+    skip.className = 'btn ghost tour-btn-sm';
+    skip.textContent = 'Salta';
+    skip.addEventListener('click', () => endTour());
+    row.appendChild(skip);
+
+    const right = document.createElement('div');
+    right.style.cssText = 'display:flex;gap:8px;';
+    if (tourState.step > 0) {
+      const prev = document.createElement('button');
+      prev.className = 'btn ghost tour-btn-sm';
+      prev.textContent = '← Indietro';
+      prev.addEventListener('click', () => { tourState.step--; tourState.scrolled = false; updateTourOverlay(); });
+      right.appendChild(prev);
+    }
+    const next = document.createElement('button');
+    next.className = 'btn tour-btn-sm';
+    next.textContent = isLast ? 'Inizia!' : 'Avanti →';
+    next.addEventListener('click', () => {
+      if (isLast) { endTour(); } else { tourState.step++; tourState.scrolled = false; updateTourOverlay(); }
+    });
+    right.appendChild(next);
+    row.appendChild(right);
+    tt.appendChild(row);
+    document.body.appendChild(tt);
   }
 
   // ----- Storage -----
@@ -280,7 +423,6 @@
     view: 'home', // 'home' | 'session' | 'recap' | 'reviewExercise' | 'history'
     recap: null,
     confirmModal: null,
-    tourStep: -1,
   };
 
   function setView(view, data = {}) {
@@ -322,8 +464,8 @@
     root.appendChild(content);
     root.appendChild(renderFooter());
     if (state.confirmModal) root.appendChild(renderModal(state.confirmModal));
-    if (state.tourStep >= 0) root.appendChild(renderTour());
     if (!getConsent()) root.appendChild(renderConsentBanner());
+    updateTourOverlay();
   }
 
   function renderConsentBanner() {
@@ -396,34 +538,13 @@
     return el('button', {
       class: 'tour-trigger',
       title: 'Guida introduttiva',
-      on: { click: () => { state.tourStep = 0; render(); } },
+      on: { click: () => {
+        tourState.active = true;
+        tourState.step = 0;
+        tourState.scrolled = false;
+        if (state.view !== 'home') setView('home'); else updateTourOverlay();
+      } },
     }, '?');
-  }
-
-  function renderTour() {
-    const step = state.tourStep;
-    const s = TOUR_STEPS[step];
-    const isLast = step === TOUR_STEPS.length - 1;
-
-    const dismiss = () => { prefs.tourDone = true; savePrefs(); state.tourStep = -1; render(); };
-    const next    = () => { isLast ? dismiss() : (state.tourStep++, render()); };
-
-    return el('div', { class: 'tour-backdrop' }, [
-      el('div', { class: 'tour-card' }, [
-        el('div', { class: 'tour-dots' },
-          TOUR_STEPS.map((_, i) =>
-            el('div', { class: 'tour-dot' + (i === step ? ' active' : i < step ? ' done' : '') })
-          )
-        ),
-        el('span', { class: 'tour-icon' }, s.icon),
-        el('h3', { class: 'tour-title' }, s.title),
-        el('p', { class: 'tour-body' }, s.body),
-        el('div', { class: 'tour-actions' }, [
-          el('button', { class: 'tour-skip', on: { click: dismiss } }, 'Salta e non mostrare più'),
-          el('button', { class: 'btn', on: { click: next } }, isLast ? 'Inizia! →' : 'Avanti →'),
-        ]),
-      ]),
-    ]);
   }
 
   function renderFooter() {
@@ -445,6 +566,18 @@
             render();
           } },
         }, 'Gestisci cookie'),
+        ' · ',
+        el('a', {
+          href: '#',
+          class: 'back-link',
+          on: { click: (e) => {
+            e.preventDefault();
+            tourState.active = true;
+            tourState.step = 0;
+            tourState.scrolled = false;
+            if (state.view !== 'home') setView('home'); else updateTourOverlay();
+          } },
+        }, 'Tour guidato'),
       ]),
     ]);
   }
@@ -494,7 +627,7 @@
     const wrap = el('div');
 
     wrap.appendChild(el('div', { class: 'actions-grid' }, [
-      el('div', { class: 'card' }, [
+      el('div', { class: 'card card-exercises' }, [
         el('h2', {}, 'Esercitazioni'),
         el('p', {}, '10 sessioni che coprono tutte le domande senza ripetizioni. Ordine domande e risposte casuale. Timer 60 minuti per sessione (non blocca, mostra eventuale sforamento).'),
         el('div', { class: 'btn-row' }, [
@@ -519,6 +652,7 @@
                     savePersisted();
                     state.confirmModal = null;
                     setView('home');
+                    document.getElementById('session-list')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
                   },
                 };
                 render();
@@ -526,12 +660,13 @@
                 persisted.exercises = generateExercises();
                 savePersisted();
                 setView('home');
+                document.getElementById('session-list')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
               }
             } },
           }, persisted.exercises ? 'Rigenera Esercitazioni' : 'Genera Esercitazioni'),
         ]),
       ]),
-      el('div', { class: 'card' }, [
+      el('div', { class: 'card card-exam' }, [
         el('h2', {}, 'Esame'),
         el('p', {}, '30 domande casuali, risposte mescolate. Timer 90 minuti — alla scadenza la sessione si chiude automaticamente.'),
         el('div', { class: 'btn-row' }, [
@@ -559,7 +694,7 @@
         const result = persisted.exerciseResults[i];
         list.appendChild(renderSessionCard(s, i, result));
       });
-      wrap.appendChild(el('div', {}, [
+      wrap.appendChild(el('div', { id: 'session-list' }, [
         el('h2', { style: { fontSize: '1.13rem', marginTop: '8px' } }, 'Le tue 10 sessioni'),
         list,
       ]));
@@ -939,10 +1074,11 @@
   }
 
   // ----- Boot -----
+  initUserId();
   loadPersisted();
   loadPrefs();
   applyPrefs();
-  if (!prefs.tourDone) state.tourStep = 0;
+  if (_isNewUser && !prefs.tourDone) tourState.active = true;
   applyConsent();
   render();
 })();
