@@ -93,6 +93,7 @@
   function applyConsent() {
     if (getConsent() === 'accepted') {
       loadClarity(CONFIG.clarityProjectId);
+      initClarityIdentity();
     }
   }
 
@@ -490,6 +491,7 @@
   function setView(view, data = {}) {
     Object.assign(state, { view, ...data });
     render();
+    trackClarityPageView();
   }
 
   // ----- Renderers -----
