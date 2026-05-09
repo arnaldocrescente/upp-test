@@ -75,8 +75,8 @@
    FONT SIZE SCALE  (set on <html> via data-size attribute)
    ============================================================ */
 html              { font-size: 15px; }
-[data-size="small"] { font-size: 13px; }
-[data-size="large"] { font-size: 17px; }
+[data-size="small"] { font-size: 12px; }
+[data-size="large"] { font-size: 21px; }
 
 /* ============================================================
    BASE
