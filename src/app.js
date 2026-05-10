@@ -8,6 +8,16 @@
   const PREFS_KEY   = 'quiz-prefs-v1';
   const USER_ID_KEY = 'quiz-user-id-v1';
 
+  // Base path for GitHub Pages subdirectory hosting (e.g. /upp-test)
+  const BASE = (() => {
+    const p = location.pathname;
+    return p
+      .replace(/\/esercitazione\/\d+\/?$/, '')
+      .replace(/\/(?:esame|storico)\/?$/, '')
+      .replace(/\/index\.html$/, '')
+      .replace(/\/$/, '');
+  })();
+
   let _isNewUser = false;
   const tourState = { active: false, step: 0, scrolled: false };
   const TOUR_STEPS = [
@@ -488,7 +498,26 @@
     confirmModal: null,
   };
 
+  function viewToUrl(view) {
+    if (view === 'home') return BASE + '/';
+    if (view === 'session' && active) {
+      if (active.type === 'exam') return BASE + '/esame';
+      return BASE + '/esercitazione/' + (active.session.index + 1);
+    }
+    if (view === 'history') return BASE + '/storico';
+    return null; // no URL change for recap etc.
+  }
+
   function setView(view, data = {}) {
+    Object.assign(state, { view, ...data });
+    const url = viewToUrl(view);
+    if (url !== null) history.pushState({ view }, '', url);
+    render();
+    trackClarityPageView();
+  }
+
+  // Like setView but without touching history (used from popstate handler)
+  function _applyView(view, data = {}) {
     Object.assign(state, { view, ...data });
     render();
     trackClarityPageView();
@@ -1151,4 +1180,65 @@
   if (_isNewUser && !prefs.tourDone) tourState.active = true;
   applyConsent();
   render();
+
+  // Set initial history entry so the back button has somewhere to land
+  history.replaceState({ view: 'home' }, '', BASE + '/');
+
+  // Handle browser back / forward gestures
+  window.addEventListener('popstate', (e) => {
+    if (state.view === 'session' && active && !active.finishedAt) {
+      if (active.hardStop) {
+        // Exam: push session URL back to undo the navigation, then ask
+        history.pushState({ view: 'session' }, '', viewToUrl('session'));
+        state.confirmModal = {
+          title: "Abbandonare l'esame?",
+          body: 'Tornando indietro l\'esame in corso verrà perso.',
+          confirmLabel: 'Abbandona',
+          confirmClass: 'btn danger',
+          onConfirm: () => {
+            state.confirmModal = null;
+            if (timerHandle) { clearInterval(timerHandle); timerHandle = null; }
+            active = null;
+            setView('home');
+          },
+        };
+        render();
+      } else {
+        // Exercise: auto-pause and go home (URL already changed by popstate)
+        persisted.pausedSession = {
+          session: active.session,
+          type: active.type,
+          durationMs: active.durationMs,
+          hardStop: active.hardStop,
+          pausedElapsed: Date.now() - active.startedAt,
+          answers: active.answers.slice(),
+          currentIdx: active.currentIdx,
+          seen: [...active.seen],
+          timeUpFired: active.timeUpFired,
+        };
+        savePersisted();
+        if (timerHandle) { clearInterval(timerHandle); timerHandle = null; }
+        active = null;
+        _applyView('home');
+      }
+      return;
+    }
+
+    const targetView = e.state?.view ?? 'home';
+    if (targetView === 'session') {
+      // No active session to restore (e.g. forward from history)
+      _applyView('home');
+      history.replaceState({ view: 'home' }, '', BASE + '/');
+    } else {
+      _applyView(targetView, e.state ?? {});
+    }
+  });
+
+  // Warn before closing/reloading tab when a session is in progress
+  window.addEventListener('beforeunload', (e) => {
+    if (active && !active.finishedAt) {
+      e.preventDefault();
+      e.returnValue = '';
+    }
+  });
 })();
