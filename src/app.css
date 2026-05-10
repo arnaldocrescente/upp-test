@@ -353,6 +353,7 @@ header.app-header .meta {
   align-items: center;
   gap: 10px;
   flex-wrap: wrap;
+  margin-top: 10px;
 }
 .worst-label {
   font-size: 0.87rem;

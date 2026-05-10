@@ -861,28 +861,29 @@
       '.',
     ]));
 
+    const worstRow = el('div', { class: 'worst-row' });
+    worstRow.appendChild(el('label', { for: 'worst-count', class: 'worst-label' }, 'Domande difficili nell\'esame (0–30):'));
+    const inp = el('input', {
+      id: 'worst-count',
+      type: 'number',
+      min: '0',
+      max: '30',
+      value: String(prefs.worstInExam ?? 5),
+      class: 'worst-input',
+    });
+    inp.addEventListener('change', () => {
+      const v = parseInt(inp.value, 10);
+      if (!isNaN(v) && v >= 0 && v <= 30) { prefs.worstInExam = v; savePrefs(); }
+    });
+    worstRow.appendChild(inp);
+    card.appendChild(worstRow);
+
     if (infoOpen) {
       card.appendChild(renderInfoPanel('La prova d\'esame funziona come l\'esame vero: 30 domande da rispondere in 90 minuti. Quando il tempo finisce, la sessione si chiude da sola. Il punteggio funziona così: risposta giusta = 1 punto, risposta parzialmente giusta = 0,5 punti, risposta sbagliata o non data = 0 punti. La prova include sempre alcune delle domande che ti hanno dato più difficoltà nelle esercitazioni.'));
     }
     if (tipOpen) {
       const panel = el('div', { class: 'info-panel' });
-      panel.appendChild(el('p', { style: { margin: '0 0 12px 0' } }, 'Non fare la prova d\'esame subito: prima completa almeno 2 o 3 sessioni di esercitazione. In questo modo il sistema saprà già su quali argomenti devi lavorare di più e le includerà nella prova.'));
-      const worstRow = el('div', { class: 'worst-row' });
-      worstRow.appendChild(el('label', { for: 'worst-count', class: 'worst-label' }, 'Domande difficili nell\'esame (0–30):'));
-      const inp = el('input', {
-        id: 'worst-count',
-        type: 'number',
-        min: '0',
-        max: '30',
-        value: String(prefs.worstInExam ?? 5),
-        class: 'worst-input',
-      });
-      inp.addEventListener('change', () => {
-        const v = parseInt(inp.value, 10);
-        if (!isNaN(v) && v >= 0 && v <= 30) { prefs.worstInExam = v; savePrefs(); }
-      });
-      worstRow.appendChild(inp);
-      panel.appendChild(worstRow);
+      panel.appendChild(el('p', { style: { margin: '0' } }, 'Non fare la prova d\'esame subito: prima completa almeno 2 o 3 sessioni di esercitazione. In questo modo il sistema saprà già su quali argomenti devi lavorare di più e le includerà nella prova.'));
       card.appendChild(panel);
     }
 
