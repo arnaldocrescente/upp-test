@@ -524,10 +524,10 @@
   function viewToUrl(view) {
     if (view === 'home') return BASE + '/';
     if (view === 'session' && active) {
-      if (active.type === 'exam') return BASE + '/esame';
-      return BASE + '/esercitazione/' + (active.session.index + 1);
+      if (active.type === 'exam') return BASE + '/#/esame';
+      return BASE + '/#/esercitazione/' + (active.session.index + 1);
     }
-    if (view === 'history') return BASE + '/storico';
+    if (view === 'history') return BASE + '/#/storico';
     return null; // no URL change for recap etc.
   }
 
@@ -1369,19 +1369,48 @@
   if (_isNewUser && !prefs.tourDone) tourState.active = true;
   applyConsent();
 
-  // GitHub Pages SPA routing: 404.html redirects with ?r=<original-path>
-  const _r404 = new URLSearchParams(location.search).get('r');
-  if (_r404 && _r404.startsWith('/storico')) {
+  // Hash-based SPA routing: read view from location.hash on direct load.
+  // Legacy fallback: 404.html still redirects with ?r=<path> for old bookmarks.
+  const _hash = location.hash.slice(1); // e.g. '/esercitazione/9' or ''
+  const _r404 = new URLSearchParams(location.search).get('r') ?? '';
+  const _route = _hash || _r404; // prefer hash, fall back to legacy ?r=
+
+  if (_route.startsWith('/storico')) {
     state.view = 'history';
+  } else {
+    const _exMatch = _route.match(/^\/esercitazione\/(\d+)/);
+    if (_exMatch) {
+      const _sessionIdx = parseInt(_exMatch[1], 10) - 1;
+      const ps = persisted.pausedSession;
+      if (ps && ps.session && ps.session.index === _sessionIdx) {
+        persisted.pausedSession = null;
+        savePersisted();
+        active = {
+          session: ps.session,
+          type: ps.type,
+          durationMs: ps.durationMs,
+          hardStop: ps.hardStop,
+          startedAt: Date.now() - ps.pausedElapsed,
+          finishedAt: null,
+          answers: ps.answers,
+          currentIdx: ps.currentIdx,
+          seen: new Set(ps.seen),
+          timeUpFired: ps.timeUpFired,
+        };
+        state.view = 'session';
+      }
+    }
   }
 
   render();
 
+  if (state.view === 'session' && active) {
+    if (timerHandle) clearInterval(timerHandle);
+    timerHandle = setInterval(tick, 250);
+  }
+
   // Set initial history entry so the back button has somewhere to land
-  const _initialUrl = _r404
-    ? BASE + (_r404.startsWith('/storico') ? '/storico' : '/')
-    : BASE + '/';
-  history.replaceState({ view: state.view }, '', _initialUrl);
+  history.replaceState({ view: state.view }, '', viewToUrl(state.view) ?? BASE + '/');
 
   // Handle browser back / forward gestures
   window.addEventListener('popstate', (e) => {
