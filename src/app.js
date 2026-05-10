@@ -1373,14 +1373,51 @@
   const _r404 = new URLSearchParams(location.search).get('r');
   if (_r404 && _r404.startsWith('/storico')) {
     state.view = 'history';
+  } else if (_r404) {
+    const _exMatch = _r404.match(/^\/esercitazione\/(\d+)/);
+    if (_exMatch) {
+      const _sessionIdx = parseInt(_exMatch[1], 10) - 1;
+      const ps = persisted.pausedSession;
+      if (ps && ps.session && ps.session.index === _sessionIdx) {
+        persisted.pausedSession = null;
+        savePersisted();
+        active = {
+          session: ps.session,
+          type: ps.type,
+          durationMs: ps.durationMs,
+          hardStop: ps.hardStop,
+          startedAt: Date.now() - ps.pausedElapsed,
+          finishedAt: null,
+          answers: ps.answers,
+          currentIdx: ps.currentIdx,
+          seen: new Set(ps.seen),
+          timeUpFired: ps.timeUpFired,
+        };
+        state.view = 'session';
+      }
+    }
   }
 
   render();
 
+  if (state.view === 'session' && active) {
+    if (timerHandle) clearInterval(timerHandle);
+    timerHandle = setInterval(tick, 250);
+  }
+
   // Set initial history entry so the back button has somewhere to land
-  const _initialUrl = _r404
-    ? BASE + (_r404.startsWith('/storico') ? '/storico' : '/')
-    : BASE + '/';
+  let _initialUrl;
+  if (_r404) {
+    if (_r404.startsWith('/storico')) {
+      _initialUrl = BASE + '/storico';
+    } else if (state.view === 'session') {
+      _initialUrl = viewToUrl('session');
+    } else {
+      _initialUrl = BASE + '/';
+    }
+  } else {
+    _initialUrl = BASE + '/';
+  }
   history.replaceState({ view: state.view }, '', _initialUrl);
 
   // Handle browser back / forward gestures
