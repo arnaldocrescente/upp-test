@@ -1368,10 +1368,20 @@
   applyPrefs();
   if (_isNewUser && !prefs.tourDone) tourState.active = true;
   applyConsent();
+
+  // GitHub Pages SPA routing: 404.html redirects with ?r=<original-path>
+  const _r404 = new URLSearchParams(location.search).get('r');
+  if (_r404 && _r404.startsWith('/storico')) {
+    state.view = 'history';
+  }
+
   render();
 
   // Set initial history entry so the back button has somewhere to land
-  history.replaceState({ view: 'home' }, '', BASE + '/');
+  const _initialUrl = _r404
+    ? BASE + (_r404.startsWith('/storico') ? '/storico' : '/')
+    : BASE + '/';
+  history.replaceState({ view: state.view }, '', _initialUrl);
 
   // Handle browser back / forward gestures
   window.addEventListener('popstate', (e) => {

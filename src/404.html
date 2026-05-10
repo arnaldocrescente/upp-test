@@ -1,0 +1,12 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script>
+    var l = window.location;
+    var base = l.pathname.split('/').slice(0, 2).join('/');
+    l.replace(l.origin + base + '/?r=' + encodeURIComponent(l.pathname.slice(base.length) + l.search) + l.hash);
+  </script>
+</head>
+<body></body>
+</html>
