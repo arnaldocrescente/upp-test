@@ -34,10 +34,16 @@
       text: '10 sessioni coprono tutte le 297 domande senza ripetizioni. Il timer da 60 minuti è indicativo: puoi continuare anche dopo la scadenza.',
     },
     {
+      target: '.card-meta-btns',
+      icon: 'ℹ️',
+      title: 'Info e Consigli',
+      text: 'Ogni sezione ha due tasti: ℹ per sapere come funziona e 💡 per i consigli su come usarla al meglio per prepararti.',
+    },
+    {
       target: '.card-exam',
       icon: '⏱',
       title: "Prova d'esame",
-      text: "30 domande casuali con timer da 90 minuti che chiude la sessione automaticamente. Punteggio: corretta 1 pt · parziale 0,5 pt · sbagliata 0 pt.",
+      text: "30 domande casuali con timer da 90 minuti che chiude la sessione automaticamente. Punteggio: corretta 1 pt · parziale 0,5 pt · sbagliata 0 pt. La prova include in automatico le domande che hai sbagliato più spesso — puoi cambiare quante nel pannello 💡.",
     },
     {
       target: '.header-controls',
@@ -68,7 +74,7 @@
   };
 
   // ----- Preferences (theme / font size / tour) -----
-  const prefs = { theme: 'dark', fontSize: 'medium', tourDone: false };
+  const prefs = { theme: 'dark', fontSize: 'medium', tourDone: false, worstInExam: 5 };
 
   function loadPrefs() {
     try {
@@ -149,7 +155,7 @@
         targetEl.style.outline = '2px solid #3b82f6';
         targetEl.style.outlineOffset = '4px';
         if (!tourState.scrolled) {
-          targetEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          targetEl.scrollIntoView({ behavior: 'instant', block: 'start' });
           tourState.scrolled = true;
         }
         targetRect = targetEl.getBoundingClientRect();
@@ -182,7 +188,14 @@
       tLeft = targetRect.left + (targetRect.width - TW) / 2;
       tLeft = Math.max(12, Math.min(tLeft, vw - TW - 12));
       const spaceBelow = vh - (targetRect.bottom + PAD + 14);
-      tTop = spaceBelow >= 160 ? targetRect.bottom + PAD + 14 : targetRect.top - PAD - 174;
+      const spaceAbove = targetRect.top - PAD - 14;
+      if (spaceBelow >= 160) {
+        tTop = targetRect.bottom + PAD + 14;
+      } else if (spaceAbove >= 160) {
+        tTop = targetRect.top - PAD - 14 - 180;
+      } else {
+        tTop = spaceBelow >= spaceAbove ? vh - 200 : 12;
+      }
       tTop = Math.max(12, Math.min(tTop, vh - 180));
     } else {
       tLeft = Math.max(12, (vw - TW) / 2);
@@ -329,8 +342,8 @@
   }
 
   function generateExam() {
-    const WORST_IN_EXAM = 5;
-    const worstIds = getWorstAnsweredIds(WORST_IN_EXAM);
+    const worstCount = Math.min(Math.max(0, prefs.worstInExam ?? 5), EXAM_QUESTIONS);
+    const worstIds = getWorstAnsweredIds(worstCount);
     const worstSet = new Set(worstIds);
     const otherIds = shuffle(QUIZ_DATA.map((q) => q.id).filter((id) => !worstSet.has(id)));
     const ids = shuffle([...worstIds, ...otherIds.slice(0, EXAM_QUESTIONS - worstIds.length)]);
@@ -496,6 +509,13 @@
     view: 'home', // 'home' | 'session' | 'recap' | 'reviewExercise' | 'history'
     recap: null,
     confirmModal: null,
+  };
+
+  const uiState = {
+    exercisesPanel: null, // 'info' | 'tip' | null
+    examPanel: null,
+    historyPanel: null,
+    exercisesCollapsed: false,
   };
 
   function viewToUrl(view) {
@@ -716,70 +736,188 @@
     ]);
   }
 
+  function togglePanel(key, value) {
+    uiState[key] = uiState[key] === value ? null : value;
+    render();
+  }
+
+  function makeIconBtn(symbol, label, isActive, onClick) {
+    return el('button', {
+      class: 'icon-btn' + (isActive ? ' active' : ''),
+      title: label,
+      'aria-label': label,
+      on: { click: (e) => { e.stopPropagation(); onClick(); } },
+    }, symbol);
+  }
+
+  function renderInfoPanel(text) {
+    return el('div', { class: 'info-panel' }, text);
+  }
+
+  function renderExercisesCard() {
+    const key = 'exercisesPanel';
+    const infoOpen = uiState[key] === 'info';
+    const tipOpen  = uiState[key] === 'tip';
+
+    const card = el('div', { class: 'card card-exercises' });
+
+    const hdr = el('div', { class: 'card-header' });
+    hdr.appendChild(el('h2', {}, 'Esercitazioni'));
+    const metaBtns = el('div', { class: 'card-meta-btns' });
+    metaBtns.appendChild(makeIconBtn('ℹ', 'Informazioni', infoOpen, () => togglePanel(key, 'info')));
+    metaBtns.appendChild(makeIconBtn('💡', 'Consiglio di utilizzo', tipOpen, () => togglePanel(key, 'tip')));
+    hdr.appendChild(metaBtns);
+    card.appendChild(hdr);
+
+    card.appendChild(el('p', {}, '10 sessioni che coprono tutte le domande senza ripetizioni. Ordine domande e risposte casuale. Timer 60 minuti per sessione (non blocca, mostra eventuale sforamento).'));
+
+    if (infoOpen) {
+      card.appendChild(renderInfoPanel('Le esercitazioni sono divise in 10 sessioni. Ogni sessione contiene circa 30 domande, e insieme coprono tutte le 297 domande del programma — nessuna viene saltata. Le domande si presentano ogni volta in ordine diverso, così non le memorizzi meccanicamente. Il timer di 60 minuti è solo un promemoria: se lo superi non succede nulla, puoi continuare tranquillamente. I tuoi progressi vengono salvati automaticamente sul tuo dispositivo.'));
+    }
+    if (tipOpen) {
+      card.appendChild(renderInfoPanel('Fai almeno una sessione al giorno, senza fretta. Quando hai finito tutte e 10 le sessioni, prova a fare una prova d\'esame: vedrai subito dove sei più debole. La prova d\'esame include in automatico alcune delle domande che hai sbagliato più spesso — di default sono 5, ma puoi cambiarle come preferisci nel pannello 💡 dell\'Esame.'));
+    }
+
+    card.appendChild(el('div', { class: 'btn-row' }, [
+      persisted.pausedSession
+        ? el('button', { class: 'btn', on: { click: resumeSession } }, 'Continua')
+        : el('button', { class: 'btn', disabled: '' }, 'Continua'),
+      el('button', {
+        class: 'btn ' + (persisted.exercises ? 'secondary' : ''),
+        on: { click: () => {
+          if (persisted.exercises) {
+            state.confirmModal = {
+              title: 'Rigenerare le esercitazioni?',
+              body: 'I risultati delle sessioni correnti verranno archiviati nello storico. Nessun dato verrà perso.',
+              confirmLabel: 'Rigenera',
+              onConfirm: () => {
+                const oldResults = Object.values(persisted.exerciseResults || {});
+                if (oldResults.length > 0) {
+                  persisted.exerciseHistory = [...(persisted.exerciseHistory || []), ...oldResults];
+                }
+                persisted.exercises = generateExercises();
+                persisted.exerciseResults = {};
+                savePersisted();
+                state.confirmModal = null;
+                setView('home');
+                document.getElementById('session-list')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+              },
+            };
+            render();
+          } else {
+            persisted.exercises = generateExercises();
+            savePersisted();
+            setView('home');
+            document.getElementById('session-list')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }
+        } },
+      }, persisted.exercises ? 'Rigenera Esercitazioni' : 'Genera Esercitazioni'),
+    ]));
+
+    return card;
+  }
+
+  function renderExamCard() {
+    const key = 'examPanel';
+    const infoOpen = uiState[key] === 'info';
+    const tipOpen  = uiState[key] === 'tip';
+
+    const card = el('div', { class: 'card card-exam' });
+
+    const hdr = el('div', { class: 'card-header' });
+    hdr.appendChild(el('h2', {}, 'Esame'));
+    const metaBtns = el('div', { class: 'card-meta-btns' });
+    metaBtns.appendChild(makeIconBtn('ℹ', 'Informazioni', infoOpen, () => togglePanel(key, 'info')));
+    metaBtns.appendChild(makeIconBtn('💡', 'Consiglio di utilizzo', tipOpen, () => togglePanel(key, 'tip')));
+    hdr.appendChild(metaBtns);
+    card.appendChild(hdr);
+
+    card.appendChild(el('p', {}, '30 domande casuali, risposte mescolate. Timer 90 minuti — alla scadenza la sessione si chiude automaticamente.'));
+
+    if (infoOpen) {
+      card.appendChild(renderInfoPanel('La prova d\'esame funziona come l\'esame vero: 30 domande da rispondere in 90 minuti. Quando il tempo finisce, la sessione si chiude da sola. Il punteggio funziona così: risposta giusta = 1 punto, risposta parzialmente giusta = 0,5 punti, risposta sbagliata o non data = 0 punti. La prova include sempre alcune delle domande che ti hanno dato più difficoltà nelle esercitazioni.'));
+    }
+    if (tipOpen) {
+      const panel = el('div', { class: 'info-panel' });
+      panel.appendChild(el('p', { style: { margin: '0 0 12px 0' } }, 'Non fare la prova d\'esame subito: prima completa almeno 2 o 3 sessioni di esercitazione. In questo modo il sistema saprà già su quali argomenti devi lavorare di più e le includerà nella prova.'));
+      const worstRow = el('div', { class: 'worst-row' });
+      worstRow.appendChild(el('label', { for: 'worst-count', class: 'worst-label' }, 'Domande difficili nell\'esame (0–30):'));
+      const inp = el('input', {
+        id: 'worst-count',
+        type: 'number',
+        min: '0',
+        max: '30',
+        value: String(prefs.worstInExam ?? 5),
+        class: 'worst-input',
+      });
+      inp.addEventListener('change', () => {
+        const v = parseInt(inp.value, 10);
+        if (!isNaN(v) && v >= 0 && v <= 30) { prefs.worstInExam = v; savePrefs(); }
+      });
+      worstRow.appendChild(inp);
+      panel.appendChild(worstRow);
+      card.appendChild(panel);
+    }
+
+    card.appendChild(el('div', { class: 'btn-row' }, [
+      el('button', {
+        class: 'btn success',
+        on: { click: () => {
+          const ex = generateExam();
+          startSession(ex, { durationMs: EXAM_DURATION_MS, hardStop: true });
+          setView('session');
+          if (timerHandle) clearInterval(timerHandle);
+          timerHandle = setInterval(tick, 250);
+        } },
+      }, 'Genera Esame'),
+    ]));
+
+    return card;
+  }
+
+  function renderHistoryHomeCard() {
+    const key = 'historyPanel';
+    const infoOpen = uiState[key] === 'info';
+    const tipOpen  = uiState[key] === 'tip';
+
+    const card = el('div', { class: 'card card-history' });
+
+    const hdr = el('div', { class: 'card-header' });
+    hdr.appendChild(el('h2', {}, 'Storico sessioni'));
+    const metaBtns = el('div', { class: 'card-meta-btns' });
+    metaBtns.appendChild(makeIconBtn('ℹ', 'Informazioni', infoOpen, () => togglePanel(key, 'info')));
+    metaBtns.appendChild(makeIconBtn('💡', 'Consiglio di utilizzo', tipOpen, () => togglePanel(key, 'tip')));
+    hdr.appendChild(metaBtns);
+    card.appendChild(hdr);
+
+    card.appendChild(el('p', {}, 'Consulta i risultati di tutte le sessioni completate, sia esercitazioni che prove d\'esame.'));
+
+    if (infoOpen) {
+      card.appendChild(renderInfoPanel('Qui trovi il resoconto di tutte le sessioni che hai completato, dalla più recente. Per ciascuna vedi: la data, il punteggio, quante risposte erano giuste, parzialmente giuste o sbagliate. Puoi rileggere le domande di ogni sessione con il tasto Rivedi. Quando rigeneri le esercitazioni, i vecchi risultati non vengono cancellati: restano qui nello storico.'));
+    }
+    if (tipOpen) {
+      card.appendChild(renderInfoPanel('Ogni tanto dai un\'occhiata allo storico per vedere se stai migliorando: se i punteggi salgono di sessione in sessione, sei sulla strada giusta. Fai attenzione alle risposte parziali: valgono mezzo punto ciascuna, ma se ne accumuli tante possono cambiare il risultato finale.'));
+    }
+
+    card.appendChild(el('div', { class: 'btn-row' }, [
+      el('button', {
+        class: 'btn ghost',
+        on: { click: () => setView('history') },
+      }, 'Vedi storico →'),
+    ]));
+
+    return card;
+  }
+
   function renderHome() {
     const wrap = el('div');
 
     wrap.appendChild(el('div', { class: 'actions-grid' }, [
-      el('div', { class: 'card card-exercises' }, [
-        el('h2', {}, 'Esercitazioni'),
-        el('p', {}, '10 sessioni che coprono tutte le domande senza ripetizioni. Ordine domande e risposte casuale. Timer 60 minuti per sessione (non blocca, mostra eventuale sforamento).'),
-        el('div', { class: 'btn-row' }, [
-          persisted.pausedSession
-            ? el('button', { class: 'btn', on: { click: resumeSession } }, 'Continua')
-            : el('button', { class: 'btn', disabled: '' }, 'Continua'),
-          el('button', {
-            class: 'btn ' + (persisted.exercises ? 'secondary' : ''),
-            on: { click: () => {
-              if (persisted.exercises) {
-                state.confirmModal = {
-                  title: 'Rigenerare le esercitazioni?',
-                  body: 'I risultati delle sessioni correnti verranno archiviati nello storico. Nessun dato verrà perso.',
-                  confirmLabel: 'Rigenera',
-                  onConfirm: () => {
-                    const oldResults = Object.values(persisted.exerciseResults || {});
-                    if (oldResults.length > 0) {
-                      persisted.exerciseHistory = [...(persisted.exerciseHistory || []), ...oldResults];
-                    }
-                    persisted.exercises = generateExercises();
-                    persisted.exerciseResults = {};
-                    savePersisted();
-                    state.confirmModal = null;
-                    setView('home');
-                    document.getElementById('session-list')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                  },
-                };
-                render();
-              } else {
-                persisted.exercises = generateExercises();
-                savePersisted();
-                setView('home');
-                document.getElementById('session-list')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-              }
-            } },
-          }, persisted.exercises ? 'Rigenera Esercitazioni' : 'Genera Esercitazioni'),
-        ]),
-      ]),
-      el('div', { class: 'card card-exam' }, [
-        el('h2', {}, 'Esame'),
-        el('p', {}, '30 domande casuali, risposte mescolate. Timer 90 minuti — alla scadenza la sessione si chiude automaticamente.'),
-        el('div', { class: 'btn-row' }, [
-          el('button', {
-            class: 'btn success',
-            on: { click: () => {
-              const ex = generateExam();
-              startSession(ex, { durationMs: EXAM_DURATION_MS, hardStop: true });
-              setView('session');
-              if (timerHandle) clearInterval(timerHandle);
-              timerHandle = setInterval(tick, 250);
-            } },
-          }, 'Genera Esame'),
-          el('button', {
-            class: 'btn ghost',
-            on: { click: () => setView('history') },
-          }, 'Storico sessioni'),
-        ]),
-      ]),
+      renderExercisesCard(),
+      renderExamCard(),
     ]));
+
+    wrap.appendChild(renderHistoryHomeCard());
 
     if (persisted.exercises) {
       const list = el('div', { class: 'session-list' });
@@ -787,10 +925,24 @@
         const result = persisted.exerciseResults[i];
         list.appendChild(renderSessionCard(s, i, result));
       });
-      wrap.appendChild(el('div', { id: 'session-list' }, [
-        el('h2', { style: { fontSize: '1.13rem', marginTop: '8px' } }, 'Le tue 10 sessioni'),
-        list,
-      ]));
+
+      const sessionSection = el('div', { id: 'session-list' });
+
+      const sectionHdr = el('div', { class: 'session-list-header' });
+      sectionHdr.appendChild(el('h2', { style: { fontSize: '1.13rem', margin: '0' } }, 'Le tue 10 sessioni'));
+      sectionHdr.appendChild(el('button', {
+        class: 'icon-btn',
+        title: uiState.exercisesCollapsed ? 'Espandi sessioni' : 'Comprimi sessioni',
+        'aria-label': uiState.exercisesCollapsed ? 'Espandi sessioni' : 'Comprimi sessioni',
+        on: { click: () => { uiState.exercisesCollapsed = !uiState.exercisesCollapsed; render(); } },
+      }, uiState.exercisesCollapsed ? '▼' : '▲'));
+      sessionSection.appendChild(sectionHdr);
+
+      if (!uiState.exercisesCollapsed) {
+        sessionSection.appendChild(list);
+      }
+
+      wrap.appendChild(sessionSection);
     }
 
     if (CONFIG.paypalMeUsername) {
