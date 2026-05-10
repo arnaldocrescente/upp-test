@@ -288,18 +288,19 @@
   }
 
   function buildSessionFromIds(ids) {
-    return ids.map((qid) => {
+    return ids.flatMap((qid) => {
       const q = QUIZ_DATA.find((x) => x.id === qid);
+      if (!q) return []; // skip stale IDs from old exercise data
       // answers: index 0 = correct (1pt), index 1 = partial (0.5pt), index 2 = wrong (0pt)
       const indexed = q.answers.map((text, i) => ({ text, isCorrect: i === 0, isPartial: i === 1 }));
       const shuffled = shuffle(indexed);
-      return {
+      return [{
         questionId: q.id,
         question: q.question,
         answers: shuffled.map((a) => a.text),
         correctIndex: shuffled.findIndex((a) => a.isCorrect),
         partialIndex: shuffled.findIndex((a) => a.isPartial),
-      };
+      }];
     });
   }
 
@@ -335,10 +336,12 @@
         if (isWrong) counts[q.questionId] = (counts[q.questionId] || 0) + 1;
       });
     }
+    // Object keys are always strings; coerce back to the original ID type used in QUIZ_DATA.
+    const toId = (s) => { const n = Number(s); return Number.isFinite(n) ? n : s; };
     return Object.entries(counts)
       .sort((a, b) => b[1] - a[1])
       .slice(0, n)
-      .map(([id]) => id);
+      .map(([id]) => toId(id));
   }
 
   function generateExam() {
