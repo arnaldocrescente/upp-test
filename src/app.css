@@ -290,6 +290,25 @@ header.app-header .meta {
 .icon-btn.active { background: var(--primary); color: #fff; border-color: var(--primary); }
 .icon-btn.active:hover { background: var(--primary-hover); }
 
+/* Text collapse button for session list header */
+.collapse-btn {
+  border: 1px solid var(--border);
+  background: var(--bg-3);
+  color: var(--fg);
+  cursor: pointer;
+  border-radius: var(--radius);
+  font-size: 0.8rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  transition: background 0.12s;
+  font-family: inherit;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+.collapse-btn:hover { background: var(--bg-3-hover); }
+
 /* Info / tip panel */
 .info-panel {
   background: var(--primary-alpha);

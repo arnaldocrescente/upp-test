@@ -964,11 +964,11 @@
       const sectionHdr = el('div', { class: 'session-list-header' });
       sectionHdr.appendChild(el('h2', { style: { fontSize: '1.13rem', margin: '0' } }, 'Le tue 10 sessioni'));
       sectionHdr.appendChild(el('button', {
-        class: 'icon-btn',
+        class: 'collapse-btn',
         title: uiState.exercisesCollapsed ? 'Espandi sessioni' : 'Comprimi sessioni',
         'aria-label': uiState.exercisesCollapsed ? 'Espandi sessioni' : 'Comprimi sessioni',
         on: { click: () => { uiState.exercisesCollapsed = !uiState.exercisesCollapsed; render(); } },
-      }, uiState.exercisesCollapsed ? '▼' : '▲'));
+      }, uiState.exercisesCollapsed ? 'Espandi ▼' : 'Comprimi ▲'));
       sessionSection.appendChild(sectionHdr);
 
       if (!uiState.exercisesCollapsed) {
