@@ -741,19 +741,6 @@
     render();
   }
 
-  function infoSvgIcon() {
-    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-    svg.setAttribute('viewBox', '0 0 24 24');
-    svg.setAttribute('width', '14');
-    svg.setAttribute('height', '14');
-    svg.setAttribute('fill', 'currentColor');
-    svg.setAttribute('aria-hidden', 'true');
-    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-    path.setAttribute('d', 'M11,9H13V7H11M12,20C7.59,20 4,16.41 4,12C4,7.59 7.59,4 12,4C16.41,4 20,7.59 20,12C20,16.41 16.41,20 12,20M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M11,17H13V11H11V17Z');
-    svg.appendChild(path);
-    return svg;
-  }
-
   function makeIconBtn(symbol, label, isActive, onClick) {
     return el('button', {
       class: 'icon-btn' + (isActive ? ' active' : ''),
@@ -792,7 +779,7 @@
     const hdr = el('div', { class: 'card-header' });
     hdr.appendChild(el('h2', {}, 'Esercitazioni'));
     const metaBtns = el('div', { class: 'card-meta-btns' });
-    metaBtns.appendChild(makeIconBtn(infoSvgIcon(), 'Informazioni', infoOpen, () => togglePanel(key, 'info')));
+    metaBtns.appendChild(makeIconBtn('ⓘ', 'Informazioni', infoOpen, () => togglePanel(key, 'info')));
     metaBtns.appendChild(makeIconBtn('💡', 'Consiglio di utilizzo', tipOpen, () => togglePanel(key, 'tip')));
     hdr.appendChild(metaBtns);
     card.appendChild(hdr);
@@ -861,7 +848,7 @@
     const hdr = el('div', { class: 'card-header' });
     hdr.appendChild(el('h2', {}, 'Esame'));
     const metaBtns = el('div', { class: 'card-meta-btns' });
-    metaBtns.appendChild(makeIconBtn(infoSvgIcon(), 'Informazioni', infoOpen, () => togglePanel(key, 'info')));
+    metaBtns.appendChild(makeIconBtn('ⓘ', 'Informazioni', infoOpen, () => togglePanel(key, 'info')));
     metaBtns.appendChild(makeIconBtn('💡', 'Consiglio di utilizzo', tipOpen, () => togglePanel(key, 'tip')));
     hdr.appendChild(metaBtns);
     card.appendChild(hdr);
@@ -925,7 +912,7 @@
     const hdr = el('div', { class: 'card-header' });
     hdr.appendChild(el('h2', {}, 'Storico sessioni'));
     const metaBtns = el('div', { class: 'card-meta-btns' });
-    metaBtns.appendChild(makeIconBtn(infoSvgIcon(), 'Informazioni', infoOpen, () => togglePanel(key, 'info')));
+    metaBtns.appendChild(makeIconBtn('ⓘ', 'Informazioni', infoOpen, () => togglePanel(key, 'info')));
     metaBtns.appendChild(makeIconBtn('💡', 'Consiglio di utilizzo', tipOpen, () => togglePanel(key, 'tip')));
     hdr.appendChild(metaBtns);
     card.appendChild(hdr);
