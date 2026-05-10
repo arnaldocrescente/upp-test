@@ -303,6 +303,21 @@ header.app-header .meta {
 }
 .info-panel p { margin: 0; }
 
+/* Inline clickable links inside card descriptions */
+.desc-link {
+  background: none;
+  border: none;
+  color: var(--primary);
+  cursor: pointer;
+  font-size: inherit;
+  font-family: inherit;
+  padding: 0;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  display: inline;
+}
+.desc-link:hover { color: var(--primary-hover); }
+
 /* Session list header (title + collapse button) */
 .session-list-header {
   display: flex;

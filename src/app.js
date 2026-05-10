@@ -754,6 +754,21 @@
     return el('div', { class: 'info-panel' }, text);
   }
 
+  function makeCardDesc(parts) {
+    const p = el('p', {});
+    for (const part of parts) {
+      if (typeof part === 'string') {
+        p.appendChild(document.createTextNode(part));
+      } else {
+        p.appendChild(el('button', {
+          class: 'desc-link',
+          on: { click: (e) => { e.stopPropagation(); part.onClick(); } },
+        }, part.text));
+      }
+    }
+    return p;
+  }
+
   function renderExercisesCard() {
     const key = 'exercisesPanel';
     const infoOpen = uiState[key] === 'info';
@@ -769,7 +784,13 @@
     hdr.appendChild(metaBtns);
     card.appendChild(hdr);
 
-    card.appendChild(el('p', {}, '10 sessioni che coprono tutte le domande senza ripetizioni. Ordine domande e risposte casuale. Timer 60 minuti per sessione (non blocca, mostra eventuale sforamento).'));
+    card.appendChild(makeCardDesc([
+      'Allenati su tutte le 297 domande del programma, divise in 10 sessioni. Le domande cambiano ordine ogni volta e il timer non blocca mai la sessione. Per saperne di più consulta le ',
+      { text: 'informazioni', onClick: () => togglePanel(key, 'info') },
+      ' o i ',
+      { text: 'consigli', onClick: () => togglePanel(key, 'tip') },
+      '.',
+    ]));
 
     if (infoOpen) {
       card.appendChild(renderInfoPanel('Le esercitazioni sono divise in 10 sessioni. Ogni sessione contiene circa 30 domande, e insieme coprono tutte le 297 domande del programma — nessuna viene saltata. Le domande si presentano ogni volta in ordine diverso, così non le memorizzi meccanicamente. Il timer di 60 minuti è solo un promemoria: se lo superi non succede nulla, puoi continuare tranquillamente. I tuoi progressi vengono salvati automaticamente sul tuo dispositivo.'));
@@ -832,7 +853,13 @@
     hdr.appendChild(metaBtns);
     card.appendChild(hdr);
 
-    card.appendChild(el('p', {}, '30 domande casuali, risposte mescolate. Timer 90 minuti — alla scadenza la sessione si chiude automaticamente.'));
+    card.appendChild(makeCardDesc([
+      'Simula l\'esame ufficiale: 30 domande estratte a caso, timer da 90 minuti che chiude la sessione alla scadenza. Per saperne di più consulta le ',
+      { text: 'informazioni', onClick: () => togglePanel(key, 'info') },
+      ' o i ',
+      { text: 'consigli', onClick: () => togglePanel(key, 'tip') },
+      '.',
+    ]));
 
     if (infoOpen) {
       card.appendChild(renderInfoPanel('La prova d\'esame funziona come l\'esame vero: 30 domande da rispondere in 90 minuti. Quando il tempo finisce, la sessione si chiude da sola. Il punteggio funziona così: risposta giusta = 1 punto, risposta parzialmente giusta = 0,5 punti, risposta sbagliata o non data = 0 punti. La prova include sempre alcune delle domande che ti hanno dato più difficoltà nelle esercitazioni.'));
@@ -890,7 +917,13 @@
     hdr.appendChild(metaBtns);
     card.appendChild(hdr);
 
-    card.appendChild(el('p', {}, 'Consulta i risultati di tutte le sessioni completate, sia esercitazioni che prove d\'esame.'));
+    card.appendChild(makeCardDesc([
+      'Tieni traccia di tutti i tuoi risultati: esercitazioni e prove d\'esame, dalla più recente, con la possibilità di rileggere ogni sessione. Per saperne di più consulta le ',
+      { text: 'informazioni', onClick: () => togglePanel(key, 'info') },
+      ' o i ',
+      { text: 'consigli', onClick: () => togglePanel(key, 'tip') },
+      '.',
+    ]));
 
     if (infoOpen) {
       card.appendChild(renderInfoPanel('Qui trovi il resoconto di tutte le sessioni che hai completato, dalla più recente. Per ciascuna vedi: la data, il punteggio, quante risposte erano giuste, parzialmente giuste o sbagliate. Puoi rileggere le domande di ogni sessione con il tasto Rivedi. Quando rigeneri le esercitazioni, i vecchi risultati non vengono cancellati: restano qui nello storico.'));
