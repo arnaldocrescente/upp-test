@@ -172,6 +172,67 @@ test('getClarityUserId: returns null before init', () => {
   assertEqual(w.getClarityUserId(), null);
 });
 
+test('first visit: sets visit_count=1 and returning=no via clarity("set", ...)', () => {
+  const calls = [];
+  const { w } = loadModule({
+    clarity: function (...args) { calls.push(args); },
+  });
+  w.initClarityIdentity();
+  const setCalls = calls.filter(c => c[0] === 'set');
+  const visit = setCalls.find(c => c[1] === 'visit_count');
+  const returning = setCalls.find(c => c[1] === 'returning');
+  assert(visit && visit[2] === '1', `visit_count should be "1", got ${visit && visit[2]}`);
+  assert(returning && returning[2] === 'no', `returning should be "no", got ${returning && returning[2]}`);
+});
+
+test('second visit (after session gap): increments visit_count and sets returning=yes', () => {
+  const sharedLocal = makeMockStorage();
+  // Seed last visit > 30 min ago.
+  sharedLocal.setItem('clarity:userId', '11111111-1111-4111-8111-111111111111');
+  sharedLocal.setItem('clarity:visits', '1');
+  sharedLocal.setItem('clarity:firstSeen', String(Date.now() - 24 * 60 * 60 * 1000));
+  sharedLocal.setItem('clarity:lastSeen', String(Date.now() - 60 * 60 * 1000));
+
+  const calls = [];
+  const { w } = loadModule({
+    localStorage: sharedLocal,
+    clarity: function (...args) { calls.push(args); },
+  });
+  w.initClarityIdentity();
+  const setCalls = calls.filter(c => c[0] === 'set');
+  const visit = setCalls.find(c => c[1] === 'visit_count');
+  const returning = setCalls.find(c => c[1] === 'returning');
+  assertEqual(visit[2], '2');
+  assertEqual(returning[2], 'yes');
+});
+
+test('reload within session gap: does NOT increment visit_count', () => {
+  const sharedLocal = makeMockStorage();
+  sharedLocal.setItem('clarity:userId', '11111111-1111-4111-8111-111111111111');
+  sharedLocal.setItem('clarity:visits', '3');
+  sharedLocal.setItem('clarity:firstSeen', String(Date.now() - 24 * 60 * 60 * 1000));
+  sharedLocal.setItem('clarity:lastSeen', String(Date.now() - 60 * 1000)); // 1 min ago
+
+  const calls = [];
+  const { w } = loadModule({
+    localStorage: sharedLocal,
+    clarity: function (...args) { calls.push(args); },
+  });
+  w.initClarityIdentity();
+  const visit = calls.filter(c => c[0] === 'set').find(c => c[1] === 'visit_count');
+  assertEqual(visit[2], '3');
+});
+
+test('getClarityVisitStats: reflects the persisted counter', () => {
+  const sharedLocal = makeMockStorage();
+  const { w } = loadModule({ localStorage: sharedLocal });
+  w.initClarityIdentity();
+  const stats = w.getClarityVisitStats();
+  assertEqual(stats.visits, 1);
+  assert(typeof stats.first === 'number', 'first should be a timestamp');
+  assert(typeof stats.last === 'number', 'last should be a timestamp');
+});
+
 // ── Summary ──────────────────────────────────────────────────────────────────
 
 console.log(`\n${passed} passed, ${failed} failed\n`);
