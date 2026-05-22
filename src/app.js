@@ -369,6 +369,7 @@
   let active = null;
   let timerHandle = null;
   let toastTimeout = null;
+  let shareDropdownQId = null;
 
   function startSession(session, opts) {
     active = {
@@ -417,6 +418,90 @@
     t.textContent = msg;
     document.body.appendChild(t);
     toastTimeout = setTimeout(() => t.remove(), ms);
+  }
+
+  // ----- Share -----
+  function buildShareUrl(questionId) {
+    return location.origin + BASE + '/reference.html#q' + questionId;
+  }
+
+  function buildAppShareUrl() {
+    return location.origin + BASE + '/';
+  }
+
+  async function openShare(q) {
+    const url = buildShareUrl(q.questionId);
+    const text = 'Domanda UPP #' + q.questionId + ': ' + q.question.slice(0, 120) + (q.question.length > 120 ? '…' : '');
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: 'Quiz Addetti UPP', text, url });
+        return;
+      } catch (err) {
+        if (err.name === 'AbortError') return;
+      }
+    }
+    shareDropdownQId = shareDropdownQId === q.questionId ? null : q.questionId;
+    render();
+  }
+
+  async function openAppShare() {
+    const url = buildAppShareUrl();
+    const text = 'Prepara l\'esame UPP con questo quiz gratuito — 297 domande ufficiali!';
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: 'Quiz Addetti UPP', text, url });
+        return;
+      } catch (err) {
+        if (err.name === 'AbortError') return;
+      }
+    }
+    shareDropdownQId = shareDropdownQId === 'app' ? null : 'app';
+    render();
+  }
+
+  function renderSharePanel(q) {
+    const qid = q ? q.questionId : 'app';
+    if (shareDropdownQId !== qid) return null;
+    const url   = q ? buildShareUrl(q.questionId) : buildAppShareUrl();
+    const text  = q
+      ? 'Domanda UPP #' + q.questionId + ': ' + q.question.slice(0, 120) + (q.question.length > 120 ? '…' : '')
+      : 'Prepara l\'esame UPP con questo quiz gratuito — 297 domande ufficiali!';
+    const encText = encodeURIComponent(text);
+    const encUrl  = encodeURIComponent(url);
+    return el('div', {
+      class: 'share-panel',
+      on: { click: (e) => e.stopPropagation() },
+    }, [
+      el('a', {
+        class: 'share-option',
+        href: 'https://wa.me/?text=' + encText + '%0A' + encUrl,
+        target: '_blank',
+        rel: 'noopener noreferrer',
+      }, '📱 WhatsApp'),
+      el('a', {
+        class: 'share-option',
+        href: 'https://t.me/share/url?url=' + encUrl + '&text=' + encText,
+        target: '_blank',
+        rel: 'noopener noreferrer',
+      }, '✈️ Telegram'),
+      el('a', {
+        class: 'share-option',
+        href: 'sms:?body=' + encText + '%0A' + encUrl,
+      }, '💬 SMS'),
+      el('button', {
+        class: 'share-option',
+        on: { click: async () => {
+          try {
+            await navigator.clipboard.writeText(url);
+            showToast('Link copiato!', 2000);
+          } catch {
+            showToast('Copia il link: ' + url, 6000);
+          }
+          shareDropdownQId = null;
+          render();
+        } },
+      }, '🔗 Copia link'),
+    ]);
   }
 
   function finishSession() {
@@ -532,6 +617,7 @@
   }
 
   function setView(view, data = {}) {
+    shareDropdownQId = null;
     Object.assign(state, { view, ...data });
     const url = viewToUrl(view);
     if (url !== null) history.pushState({ view }, '', url);
@@ -568,7 +654,13 @@
 
   function render() {
     root.innerHTML = '';
-    root.appendChild(renderHeader());
+    const header = renderHeader();
+    root.appendChild(header);
+    const appSharePanel = renderSharePanel(null);
+    if (appSharePanel) {
+      appSharePanel.style.marginBottom = '12px';
+      root.appendChild(appSharePanel);
+    }
 
     let content;
     if (state.view === 'home') content = renderHome();
@@ -612,6 +704,12 @@
         renderThemeControls(),
         renderFontControls(),
         renderTourButton(),
+        el('button', {
+          class: 'tour-trigger',
+          title: 'Condividi questa app',
+          'aria-label': 'Condividi app',
+          on: { click: (e) => { e.stopPropagation(); openAppShare(); } },
+        }, '↗'),
       ]),
     ]);
   }
@@ -983,12 +1081,32 @@
     }
 
     wrap.appendChild(renderReferenceCard());
+    wrap.appendChild(renderShareAppCard());
 
     if (CONFIG.paypalMeUsername) {
       wrap.appendChild(renderDonationCard());
     }
 
     return wrap;
+  }
+
+  function renderShareAppCard() {
+    const card = el('div', { class: 'card share-app-card', style: { marginTop: '24px' } });
+    card.appendChild(el('h2', {}, 'Condividi con un collega'));
+    card.appendChild(el('p', { class: 'card-desc' }, 'Conosci qualcuno che deve sostenere l\'esame UPP? Mandagli il link — l\'app è gratuita e funziona su qualsiasi dispositivo.'));
+    const btn = el('button', {
+      class: 'btn',
+      style: { display: 'inline-flex', alignItems: 'center', gap: '8px' },
+      on: { click: (e) => { e.stopPropagation(); openAppShare(); } },
+    }, '↗ Condividi l\'app');
+    card.appendChild(el('div', { class: 'btn-row' }, [btn]));
+    const panel = renderSharePanel(null);
+    if (panel) {
+      panel.style.marginTop = '12px';
+      panel.style.marginBottom = '0';
+      card.appendChild(panel);
+    }
+    return card;
   }
 
   function renderReferenceCard() {
@@ -1162,17 +1280,27 @@
     const block = el('div', { class: 'question-block' });
     const hasAnswer = active.answers[qi] !== null && active.answers[qi] !== undefined;
     block.appendChild(el('div', {
-      style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' },
+      style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px', gap: '6px' },
     }, [
-      el('div', { style: { fontSize: '0.87rem', color: 'var(--muted)' } }, `Domanda ${qi + 1} di ${total}`),
-      hasAnswer
-        ? el('button', {
-            class: 'btn ghost',
-            style: { padding: '4px 10px', fontSize: '0.8rem' },
-            on: { click: () => { active.answers[qi] = null; render(); } },
-          }, 'Annulla risposta')
-        : el('span', { style: { fontSize: '0.8rem', color: 'var(--muted)' } }, 'Non risposta'),
+      el('div', { style: { fontSize: '0.87rem', color: 'var(--muted)', flexShrink: '0' } }, `Domanda ${qi + 1} di ${total}`),
+      el('div', { style: { display: 'flex', gap: '6px', alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end' } }, [
+        hasAnswer
+          ? el('button', {
+              class: 'btn ghost',
+              style: { padding: '4px 10px', fontSize: '0.8rem' },
+              on: { click: () => { active.answers[qi] = null; render(); } },
+            }, 'Annulla risposta')
+          : el('span', { style: { fontSize: '0.8rem', color: 'var(--muted)' } }, 'Non risposta'),
+        el('button', {
+          class: 'btn ghost',
+          style: { padding: '4px 10px', fontSize: '0.8rem' },
+          title: 'Condividi questa domanda',
+          on: { click: (e) => { e.stopPropagation(); openShare(q); } },
+        }, '↗ Condividi'),
+      ]),
     ]));
+    const qSharePanel = renderSharePanel(q);
+    if (qSharePanel) block.appendChild(qSharePanel);
     block.appendChild(el('div', { class: 'question-text' }, q.question));
     const list = el('div', { class: 'answer-list' });
     q.answers.forEach((aText, ai) => {
@@ -1277,7 +1405,15 @@
           target: '_blank',
           rel: 'noopener noreferrer',
         }, '→ Domanda ' + q.questionId),
+        el('button', {
+          class: 'icon-btn',
+          title: 'Condividi questa domanda',
+          'aria-label': 'Condividi',
+          on: { click: (e) => { e.stopPropagation(); openShare(q); } },
+        }, '↗'),
       ]));
+      const recapSharePanel = renderSharePanel(q);
+      if (recapSharePanel) block.appendChild(recapSharePanel);
       block.appendChild(el('div', { class: 'q-text' }, q.question));
       q.answers.forEach((aText, ai) => {
         const isUser = ai === userAns;
@@ -1427,6 +1563,14 @@
   }
 
   render();
+
+  // Close share panel when clicking outside
+  document.addEventListener('click', () => {
+    if (shareDropdownQId !== null) {
+      shareDropdownQId = null;
+      render();
+    }
+  });
 
   if (state.view === 'session' && active) {
     if (timerHandle) clearInterval(timerHandle);
