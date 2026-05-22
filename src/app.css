@@ -700,6 +700,44 @@ header.app-header .meta {
 .tour-btn-sm { padding: 6px 12px !important; font-size: 0.8rem !important; }
 
 /* ============================================================
+   SHARE PANEL
+   ============================================================ */
+.share-panel {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  background: var(--bg-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 8px;
+  margin-bottom: 10px;
+  animation: slidein 0.15s;
+}
+
+.share-option {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 12px;
+  border-radius: 6px;
+  font-size: 0.87rem;
+  font-weight: 500;
+  cursor: pointer;
+  color: var(--fg);
+  text-decoration: none;
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  font-family: inherit;
+  white-space: nowrap;
+  transition: background 0.1s, border-color 0.1s;
+}
+.share-option:hover { background: var(--bg-3-hover); border-color: var(--primary); }
+
+@media (hover: none) {
+  .share-option:hover { background: var(--bg-2); border-color: var(--border); }
+}
+
+/* ============================================================
    MISC
    ============================================================ */
 a.back-link {
