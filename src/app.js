@@ -982,11 +982,28 @@
       wrap.appendChild(sessionSection);
     }
 
+    wrap.appendChild(renderReferenceCard());
+
     if (CONFIG.paypalMeUsername) {
       wrap.appendChild(renderDonationCard());
     }
 
     return wrap;
+  }
+
+  function renderReferenceCard() {
+    const card = el('div', { class: 'card', style: { marginTop: '24px' } });
+    card.appendChild(el('h2', {}, 'Reference completo'));
+    card.appendChild(el('p', { class: 'card-desc' }, `Consulta tutte le ${QUIZ_DATA.length} domande della banca dati con le risposte ufficiali (corretta, parziale, errata).`));
+    card.appendChild(el('div', { class: 'btn-row' }, [
+      el('a', {
+        class: 'btn ghost',
+        href: BASE + '/reference.html',
+        target: '_blank',
+        rel: 'noopener noreferrer',
+      }, 'Apri reference →'),
+    ]));
+    return card;
   }
 
   function paypalUrl(amount) {
@@ -1259,7 +1276,7 @@
           title: 'Vedi la domanda nel reference',
           target: '_blank',
           rel: 'noopener noreferrer',
-        }, '#' + q.questionId),
+        }, '→ Domanda ' + q.questionId),
       ]));
       block.appendChild(el('div', { class: 'q-text' }, q.question));
       q.answers.forEach((aText, ai) => {
