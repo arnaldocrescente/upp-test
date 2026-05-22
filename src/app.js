@@ -1253,6 +1253,13 @@
             : isPartial
               ? el('span', { class: 'tag partial' }, 'Parziale')
               : el('span', { class: 'tag wrong' }, 'Errata'),
+        el('a', {
+          href: BASE + '/reference.html#q' + q.questionId,
+          class: 'ref-link',
+          title: 'Vedi la domanda nel reference',
+          target: '_blank',
+          rel: 'noopener noreferrer',
+        }, '#' + q.questionId),
       ]));
       block.appendChild(el('div', { class: 'q-text' }, q.question));
       q.answers.forEach((aText, ai) => {
