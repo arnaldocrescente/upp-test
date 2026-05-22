@@ -421,6 +421,15 @@
   }
 
   // ----- Share -----
+  function shareIconSvg(size) {
+    const s = size || 16;
+    const apple = /iPhone|iPad|iPod|Macintosh/.test(navigator.userAgent);
+    if (apple) {
+      return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="${s}" height="${s}" fill="currentColor" aria-hidden="true" style="vertical-align:middle;flex-shrink:0"><path d="M16 5l-1.42 1.42-1.59-1.59V16h-1.98V4.83L9.42 6.42 8 5l4-4 4 4zm4 5v11c0 1.1-.9 2-2 2H6c-1.11 0-2-.89-2-2V10c0-1.11.89-2 2-2h3v2H6v11h12V10h-3V8h3c1.1 0 2 .89 2 2z"/></svg>`;
+    }
+    return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="${s}" height="${s}" fill="currentColor" aria-hidden="true" style="vertical-align:middle;flex-shrink:0"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92s2.92-1.31 2.92-2.92c0-1.61-1.31-2.92-2.92-2.92z"/></svg>`;
+  }
+
   function buildShareUrl(questionId) {
     return location.origin + BASE + '/reference.html#q' + questionId;
   }
@@ -705,11 +714,12 @@
         renderFontControls(),
         renderTourButton(),
         el('button', {
-          class: 'tour-trigger',
+          class: 'share-trigger',
           title: 'Condividi questa app',
           'aria-label': 'Condividi app',
+          html: shareIconSvg(15) + '<span class="share-trigger-label">Condividi</span>',
           on: { click: (e) => { e.stopPropagation(); openAppShare(); } },
-        }, '↗'),
+        }),
       ]),
     ]);
   }
@@ -1097,8 +1107,9 @@
     const btn = el('button', {
       class: 'btn',
       style: { display: 'inline-flex', alignItems: 'center', gap: '8px' },
+      html: shareIconSvg(16) + '<span>Condividi l\'app</span>',
       on: { click: (e) => { e.stopPropagation(); openAppShare(); } },
-    }, '↗ Condividi l\'app');
+    });
     card.appendChild(el('div', { class: 'btn-row' }, [btn]));
     const panel = renderSharePanel(null);
     if (panel) {
@@ -1293,10 +1304,11 @@
           : el('span', { style: { fontSize: '0.8rem', color: 'var(--muted)' } }, 'Non risposta'),
         el('button', {
           class: 'btn ghost',
-          style: { padding: '4px 10px', fontSize: '0.8rem' },
+          style: { padding: '4px 10px', fontSize: '0.8rem', display: 'inline-flex', alignItems: 'center', gap: '5px' },
           title: 'Condividi questa domanda',
+          html: shareIconSvg(14) + '<span>Condividi</span>',
           on: { click: (e) => { e.stopPropagation(); openShare(q); } },
-        }, '↗ Condividi'),
+        }),
       ]),
     ]));
     const qSharePanel = renderSharePanel(q);
@@ -1406,11 +1418,13 @@
           rel: 'noopener noreferrer',
         }, '→ Domanda ' + q.questionId),
         el('button', {
-          class: 'icon-btn',
+          class: 'btn ghost',
+          style: { padding: '3px 9px', fontSize: '0.78rem', display: 'inline-flex', alignItems: 'center', gap: '4px' },
           title: 'Condividi questa domanda',
           'aria-label': 'Condividi',
+          html: shareIconSvg(13) + '<span>Condividi</span>',
           on: { click: (e) => { e.stopPropagation(); openShare(q); } },
-        }, '↗'),
+        }),
       ]));
       const recapSharePanel = renderSharePanel(q);
       if (recapSharePanel) block.appendChild(recapSharePanel);

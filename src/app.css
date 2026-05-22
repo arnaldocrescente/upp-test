@@ -192,6 +192,30 @@ header.app-header .meta {
 }
 .tour-trigger:hover { background: var(--bg-3); color: var(--fg); }
 
+.share-trigger {
+  height: 30px;
+  padding: 0 10px;
+  border: 1px solid var(--border);
+  background: var(--bg-2);
+  color: var(--muted);
+  cursor: pointer;
+  border-radius: var(--radius);
+  font-size: 0.8rem;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  transition: background 0.12s, color 0.12s;
+  font-family: inherit;
+  white-space: nowrap;
+}
+.share-trigger:hover { background: var(--bg-3); color: var(--fg); }
+
+@media (max-width: 480px) {
+  .share-trigger { width: 30px; padding: 0; justify-content: center; border-radius: 50%; }
+  .share-trigger-label { display: none; }
+}
+
 /* ============================================================
    BUTTONS
    ============================================================ */
